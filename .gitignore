@@ -36,6 +36,7 @@ Thumbs.db
 *.opendb
 *.VC.db
 .vs/
+.vscode/
 
 # Unity3D generated meta files for ignored items
 *.pidb.meta
