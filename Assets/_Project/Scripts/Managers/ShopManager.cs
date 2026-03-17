@@ -87,10 +87,10 @@ public class ShopManager : MonoBehaviour
         {
             // Apply the math to the player
             StatManager.Instance.AddUpgrade(upgradeToBuy);
-            
+
             // Mark the item as Sold and disable the button
             MarkAsSold(slotIndex);
-            
+
             // Re-check the other buttons (in case buying this made the player too poor for the others)
             RefreshButtonStates();
         }
@@ -98,9 +98,9 @@ public class ShopManager : MonoBehaviour
 
     private void MarkAsSold(int slotIndex)
     {
-        if (slotIndex == 0) { button1.interactable = false; nameText1.text = "SOLD"; }
-        if (slotIndex == 1) { button2.interactable = false; nameText2.text = "SOLD"; }
-        if (slotIndex == 2) { button3.interactable = false; nameText3.text = "SOLD"; }
+        if (slotIndex == 0) { button1.interactable = false; costText1.text = "SOLD"; }
+        if (slotIndex == 1) { button2.interactable = false; costText2.text = "SOLD"; }
+        if (slotIndex == 2) { button3.interactable = false; costText3.text = "SOLD"; }
     }
 
     private void RefreshButtonStates()

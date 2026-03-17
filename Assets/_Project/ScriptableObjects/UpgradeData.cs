@@ -1,7 +1,6 @@
+using System.Collections.Generic;
 using UnityEngine;
 
-// 1. Define the types of stats we can upgrade. 
-// Terry and Gagan will read from this list later.
 public enum StatType
 {
     MaxHealth,
@@ -12,11 +11,19 @@ public enum StatType
     HostDecayRate
 }
 
-// 2. This creates a new menu option when you right-click in the Project window!
+// 1. This is the new container for a single stat change
+[System.Serializable]
+public class StatModifier
+{
+    public StatType statToModify;
+    public float modifierValue; 
+    public bool isMultiplier; 
+}
+
 [CreateAssetMenu(fileName = "New Upgrade", menuName = "ParasiteArena/Upgrade Data")]
 public class UpgradeData : ScriptableObject
 {
-    [Header("UI Details (For Gagan)")]
+    [Header("UI Details")]
     public string upgradeName;
     [TextArea(2, 4)]
     public string description;
@@ -25,12 +32,7 @@ public class UpgradeData : ScriptableObject
     [Header("Economy")]
     public int goldCost;
 
+    // 2. Instead of one stat, we now have a LIST of stats!
     [Header("Stat Modifiers")]
-    public StatType statToModify;
-    
-    [Tooltip("The actual number added or multiplied to the base stat.")]
-    public float modifierValue; 
-    
-    [Tooltip("Check this if it's a multiplier (e.g. 1.1 for +10%), uncheck if it's a flat addition (e.g. +50 HP)")]
-    public bool isMultiplier; 
+    public List<StatModifier> statModifiers = new List<StatModifier>();
 }

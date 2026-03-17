@@ -57,22 +57,28 @@ public class StatManager : MonoBehaviour
             currentStats[stat.statType] = stat.baseValue;
         }
 
-        // Step 2: Apply all FLAT additions first (Order of Operations is crucial in games)
+        // Step 2: Apply all FLAT additions first
         foreach (var upgrade in activeUpgrades)
         {
-            if (!upgrade.isMultiplier && currentStats.ContainsKey(upgrade.statToModify))
+            // We added an inner loop to check every modifier on the item!
+            foreach (var mod in upgrade.statModifiers)
             {
-                currentStats[upgrade.statToModify] += upgrade.modifierValue;
+                if (!mod.isMultiplier && currentStats.ContainsKey(mod.statToModify))
+                {
+                    currentStats[mod.statToModify] += mod.modifierValue;
+                }
             }
         }
 
         // Step 3: Apply all MULTIPLIERS second
-        // Example: (100 Base HP + 50 Flat Upgrade) * 1.10 Multiplier = 165 Max HP
         foreach (var upgrade in activeUpgrades)
         {
-            if (upgrade.isMultiplier && currentStats.ContainsKey(upgrade.statToModify))
+            foreach (var mod in upgrade.statModifiers)
             {
-                currentStats[upgrade.statToModify] *= upgrade.modifierValue;
+                if (mod.isMultiplier && currentStats.ContainsKey(mod.statToModify))
+                {
+                    currentStats[mod.statToModify] *= mod.modifierValue;
+                }
             }
         }
     }
