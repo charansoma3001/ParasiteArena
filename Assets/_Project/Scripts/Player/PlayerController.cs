@@ -2,34 +2,30 @@ using System.Collections;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D))]
-[RequireComponent(typeof(SpriteRenderer))]
 public class PlayerController : MonoBehaviour
 {
     [Header("Movement")]
     public float speed = 2f;
 
     [Header("Dodge")]
-    public float dodgeSpeed          = 8f;
-    public float dodgeDuration       = 0.18f;
-    public float dodgeCooldown       = 0.8f;
-    public float perfectDodgeWindow  = 0.08f; // seconds at start of dodge that count as perfect
+    public float dodgeSpeed         = 8f;
+    public float dodgeDuration      = 0.18f;
+    public float dodgeCooldown      = 0.8f;
+    public float perfectDodgeWindow = 0.08f;
 
     [Header("Health")]
     public int maxHealth = 100;
 
-    // ── Runtime state ──────────────────────────────────────────
-    public int  CurrentHealth  { get; private set; }
-    public bool IsDead         { get; private set; }
-    public bool IsDodging      { get; private set; }
-    public bool IsInvincible   { get; private set; }
-    public bool IsPossessing   => PossessionSystem.Instance != null &&
-                                  PossessionSystem.Instance.IsPossessing;
+    public int  CurrentHealth { get; private set; }
+    public bool IsDead        { get; private set; }
+    public bool IsDodging     { get; private set; }
+    public bool IsInvincible  { get; private set; }
+    public bool IsPossessing  => PossessionSystem.Instance != null &&
+                                 PossessionSystem.Instance.IsPossessing;
 
-    // ── Events ─────────────────────────────────────────────────
-    public static event System.Action<int, int> OnHealthChanged; // Gagan - UIManager (current, max)
-    public static event System.Action           OnPlayerDied;    // Gagan - UIManager / Charan - ScoreManager
+    public static event System.Action<int, int> OnHealthChanged; // Gagan - UIManager
+    public static event System.Action           OnPlayerDied;    // Gagan - UIManager + Charan - ScoreManager
 
-    // ── Private ────────────────────────────────────────────────
     private Rigidbody2D    _rb;
     private Animator       _anim;
     private SpriteRenderer _sr;
@@ -42,16 +38,18 @@ public class PlayerController : MonoBehaviour
     private void Start()
     {
         _rb   = GetComponent<Rigidbody2D>();
-        _anim = GetComponent<Animator>();
-        _sr   = GetComponent<SpriteRenderer>();
+        _rb.freezeRotation = true;
+
+        // Animator and SpriteRenderer may be on this object or on a child — check both
+        _anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>();
+        _sr   = GetComponent<SpriteRenderer>() ?? GetComponentInChildren<SpriteRenderer>();
 
         CurrentHealth = maxHealth;
     }
 
     private void Update()
     {
-        if (IsDead || IsPossessing) return;
-        if (IsDodging) return;
+        if (IsDead || IsPossessing || IsDodging) return;
 
         _dodgeCooldownTimer -= Time.deltaTime;
 
@@ -59,7 +57,7 @@ public class PlayerController : MonoBehaviour
         float v = Input.GetAxisRaw("Vertical");
         _movement = new Vector2(h, v).normalized;
 
-        _anim.SetFloat("Speed", _movement.sqrMagnitude);
+        SetAnimFloat("Speed", _movement.sqrMagnitude);
 
         if (_movement.x != 0)
             _facingDirection = _movement.x > 0 ? -1 : 1;
@@ -74,22 +72,19 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (IsDead || IsPossessing) return;
-        if (IsDodging) return;
-
-        _rb.velocity = _movement * speed; // Charan - StatManager may override speed via GetStat()
+        if (IsDead || IsPossessing || IsDodging) return;
+        _rb.velocity = _movement * speed; // Charan - StatManager may override speed
     }
 
-    // ── Dodge ──────────────────────────────────────────────────
     private IEnumerator DodgeCoroutine()
     {
-        IsDodging              = true;
-        IsInvincible           = true;
-        _dodgeCooldownTimer    = dodgeCooldown;
-        _dodgeDir              = _movement;
+        IsDodging           = true;
+        IsInvincible        = true;
+        _dodgeCooldownTimer = dodgeCooldown;
+        _dodgeDir           = _movement;
 
-        float elapsed          = 0f;
-        bool  perfectNotified  = false;
+        float elapsed         = 0f;
+        bool  perfectNotified = false;
 
         while (elapsed < dodgeDuration)
         {
@@ -98,8 +93,7 @@ public class PlayerController : MonoBehaviour
 
             if (!perfectNotified && elapsed <= perfectDodgeWindow)
             {
-                // Terry - PossessionSystem: opens front-angle possession window
-                PossessionSystem.Instance?.NotifyPerfectDodge();
+                PossessionSystem.Instance?.NotifyPerfectDodge(); // Terry - PossessionSystem
                 perfectNotified = true;
             }
 
@@ -108,22 +102,16 @@ public class PlayerController : MonoBehaviour
 
         _rb.velocity = Vector2.zero;
         IsDodging    = false;
-
-        // Iframes linger one frame after dodge ends so last-frame hits don't land
         yield return null;
         IsInvincible = false;
     }
 
-    // ── Damage ─────────────────────────────────────────────────
-    public void TakeDamage(float amount) // called by Terry - EnemyController attacks
+    public void TakeDamage(float amount) // Terry - EnemyController
     {
         if (IsDead || IsInvincible) return;
-
         CurrentHealth = Mathf.Max(0, CurrentHealth - Mathf.RoundToInt(amount));
         OnHealthChanged?.Invoke(CurrentHealth, maxHealth); // Gagan - UIManager
-
-        if (CurrentHealth <= 0)
-            Die();
+        if (CurrentHealth <= 0) Die();
     }
 
     private void Die()
@@ -131,39 +119,30 @@ public class PlayerController : MonoBehaviour
         if (IsDead) return;
         IsDead       = true;
         _rb.velocity = Vector2.zero;
-        _anim.SetFloat("Speed", 0);
+        SetAnimFloat("Speed", 0);
         OnPlayerDied?.Invoke(); // Gagan - UIManager + Charan - ScoreManager
     }
 
-    // ── Possession hooks ───────────────────────────────────────
-    public void OnPossessionStart(EnemyController possessed) // called by Terry - PossessionSystem
+    public void OnPossessionStart(EnemyController possessed) // Terry - PossessionSystem
     {
-        _sr.enabled  = false;
+        if (_sr) _sr.enabled = false;
         _rb.velocity = Vector2.zero;
-        _anim.SetFloat("Speed", 0);
+        SetAnimFloat("Speed", 0);
     }
 
-    public void OnPossessionEnd() // called by Terry - PossessionSystem (subscribe below)
+    public void OnPossessionEnd()
     {
-        _sr.enabled = true;
+        if (_sr) _sr.enabled = true;
     }
 
-    private void OnEnable()
-    {
-        PossessionSystem.OnPossessionChanged += HandlePossessionChanged; // Terry
-    }
-
-    private void OnDisable()
-    {
-        PossessionSystem.OnPossessionChanged -= HandlePossessionChanged; // Terry
-    }
+    private void OnEnable()  => PossessionSystem.OnPossessionChanged += HandlePossessionChanged; // Terry
+    private void OnDisable() => PossessionSystem.OnPossessionChanged -= HandlePossessionChanged; // Terry
 
     private void HandlePossessionChanged(bool started, EnemyController enemy)
     {
         if (!started) OnPossessionEnd();
     }
 
-    // ── Public stat setters ────────────────────────────────────
     public void SetMaxHealth(int value) // Charan - StatManager
     {
         maxHealth     = value;
@@ -173,10 +152,16 @@ public class PlayerController : MonoBehaviour
 
     public void SetSpeed(float value) => speed = value; // Charan - StatManager
 
-    public void Heal(int amount) // Charan - ItemSystem (chest relics)
+    public void Heal(int amount) // Charan - ItemSystem
     {
         if (IsDead) return;
         CurrentHealth = Mathf.Min(maxHealth, CurrentHealth + amount);
         OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
+    }
+
+    // Null-safe animator helper — won't throw if Animator is missing
+    private void SetAnimFloat(string param, float value)
+    {
+        if (_anim != null) _anim.SetFloat(param, value);
     }
 }
