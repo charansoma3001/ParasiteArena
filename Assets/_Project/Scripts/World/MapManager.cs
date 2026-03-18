@@ -22,7 +22,6 @@ public class MapManager : MonoBehaviour
     public GameObject treePrefab;
     public GameObject chestPrefab;
     public GameObject chestOpenPrefab;
-    public Sprite wallSprite;
 
     public int chestCount = 6;
     public float chestMinSeparation = 6f;
@@ -108,8 +107,6 @@ public class MapManager : MonoBehaviour
 
         // Chest pass runs after all tiles are placed so terrain type queries are reliable and we have a complete picture of valid spawn cells.
         SpawnRareChests();
-
-        SpawnMapBoundary();
     }
 
     private void PlaceTile(int x, int y)
@@ -329,44 +326,6 @@ public class MapManager : MonoBehaviour
             Random.Range(-amount, amount),
             0f
         );
-    }
-
-    private void SpawnMapBoundary()
-    {
-        float t = 1f;  // wall thickness in world units
-        float o = 1f;  // corner overlap so no gaps
-
-        GameObject root = new GameObject("MapBoundary");
-        root.transform.SetParent(transform);
-        root.transform.localPosition = Vector3.zero;
-
-        var walls = new (string name, Vector2 pos, Vector2 size)[]
-        {
-            ("Wall_Bottom", new Vector2(width * 0.5f,    -t * 0.5f),           new Vector2(width  + o * 2, t)),
-            ("Wall_Top",    new Vector2(width * 0.5f,    height + t * 0.5f),   new Vector2(width  + o * 2, t)),
-            ("Wall_Left",   new Vector2(-t * 0.5f,       height * 0.5f),       new Vector2(t, height + o * 2)),
-            ("Wall_Right",  new Vector2(width + t * 0.5f, height * 0.5f),      new Vector2(t, height + o * 2)),
-        };
-
-        foreach (var wall in walls)
-        {
-            GameObject go = new GameObject(wall.name);
-            go.transform.SetParent(root.transform);
-            go.transform.position = new Vector3(wall.pos.x, wall.pos.y, 0f);
-
-            // Visible sprite — tiles the wallSprite across the wall's length.
-            if (wallSprite != null)
-            {
-                SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
-                sr.sprite        = wallSprite;
-                sr.drawMode      = SpriteDrawMode.Tiled;
-                sr.tileMode      = SpriteTileMode.Continuous;
-                sr.size          = wall.size;
-                sr.sortingOrder  = 10; // render on top of ground tiles
-            }
-
-            go.AddComponent<BoxCollider2D>().size = wall.size;
-        }
     }
 
     //Creates a named, empty child transform for hierarchy grouping
