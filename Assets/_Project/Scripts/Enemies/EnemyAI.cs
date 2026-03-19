@@ -6,13 +6,18 @@ using UnityEngine;
 public class EnemyAI : MonoBehaviour
 {
     [Header("Tile Movement")]
-    public float tileSize          = 0.5f;   // must match your scene tile size
-    public float stepDuration      = 0.18f;  // seconds to slide one tile
-    public float stepCooldown      = 0.35f;  // pause between steps while chasing
+    public float tileSize     = 0.5f;
+    public float stepDuration = 0.18f;
+    public float stepCooldown = 0.35f;
+
+    [Header("Archer")]
+    [Tooltip("Max tiles away the archer will shoot. Set on ArcherStats ScriptableObject too.")]
+    public int archerShootRange = 6;
+    [Tooltip("How many tiles away archer tries to keep from the player.")]
+    public int archerKiteDistance = 3;
 
     [Header("Pathfinding")]
-    public LayerMask obstacleLayer;          // Weihan - ObstacleSystem
-    public float waypointReachedRadius = 0.15f;
+    public LayerMask obstacleLayer; // Weihan 
 
     private EnemyController _ctrl;
     private Rigidbody2D     _rb;
@@ -20,8 +25,8 @@ public class EnemyAI : MonoBehaviour
     private Transform       _player;
     private EnemyAnimator   _anim;
 
-    private bool    _isStepping;
-    private float   _stepCooldownTimer;
+    private bool  _isStepping;
+    private float _stepCooldownTimer;
 
     private Vector2 _chompDir;
     private float   _chompBounceTimer;
@@ -39,19 +44,15 @@ public class EnemyAI : MonoBehaviour
         _rb   = GetComponent<Rigidbody2D>();
         _rb.freezeRotation = true;
         _rb.gravityScale   = 0f;
-
         _stats = _ctrl.stats;
         _anim  = GetComponentInChildren<EnemyAnimator>();
-
         var playerGO = GameObject.FindWithTag("Player"); // Gagan
         if (playerGO) _player = playerGO.transform;
     }
 
     private void Start()
     {
-        // Snap to nearest tile grid on spawn
         SnapToGrid();
-
         switch (_stats.enemyType)
         {
             case EnemyStats.EnemyType.Chomp:
@@ -79,18 +80,17 @@ public class EnemyAI : MonoBehaviour
         {
             case EnemyStats.EnemyType.Chomp:   UpdateChomp();   return;
             case EnemyStats.EnemyType.Spawner: UpdateSpawner(); return;
+            case EnemyStats.EnemyType.Archer:  UpdateArcher();  return;
         }
 
         UpdateHunter();
     }
 
-    // ── Hunter (Swordsman, Archer, Warrior, etc.) ─────────────────────────
     private void UpdateHunter()
     {
         if (_player == null) return;
         float dist = Vector2.Distance(transform.position, _player.position);
 
-        // Detection
         if (_ctrl.CurrentState == EnemyController.EnemyState.Idle ||
             _ctrl.CurrentState == EnemyController.EnemyState.Roaming)
         {
@@ -98,28 +98,91 @@ public class EnemyAI : MonoBehaviour
                 _ctrl.SetState(EnemyController.EnemyState.Chasing);
         }
 
-        // Chasing
         if (_ctrl.CurrentState != EnemyController.EnemyState.Chasing) return;
         if (_isStepping) return;
 
-        // Attack if player is adjacent (one tile away)
-        float attackDist = TilesFromTarget(_player.position);
-        if (attackDist <= _stats.attackRange)
+        float tilesDist = TilesFromTarget(_player.position);
+        if (tilesDist <= _stats.attackRange)
         {
-            // Face the player before attacking
-            FacingDirection = CardinalDirection((_player.position - transform.position));
+            FacingDirection = CardinalDirection(_player.position - transform.position);
             _ctrl.TriggerAttack();
             return;
         }
 
-        // Step toward player on cooldown
         if (_stepCooldownTimer > 0f) return;
         Vector2 stepDir = BestStepToward(_player.position);
         if (stepDir != Vector2.zero)
             StartCoroutine(TakeStep(stepDir));
     }
 
-    // ── Roaming (fixed enemies that wander) ───────────────────────────────
+    private void UpdateArcher()
+    {
+        if (_player == null) return;
+
+        float dist = Vector2.Distance(transform.position, _player.position);
+
+        if (_ctrl.CurrentState == EnemyController.EnemyState.Idle ||
+            _ctrl.CurrentState == EnemyController.EnemyState.Roaming)
+        {
+            if (dist <= _stats.detectionRange)
+                _ctrl.SetState(EnemyController.EnemyState.Chasing);
+        }
+
+        if (_ctrl.CurrentState != EnemyController.EnemyState.Chasing) return;
+        if (_ctrl.CurrentState == EnemyController.EnemyState.Attacking) return;
+
+        float tilesDist   = TilesFromTarget(_player.position);
+        bool  axisAligned = IsAxisAligned(_player.position);
+        bool  inRange     = tilesDist <= archerShootRange;
+
+        if (axisAligned && inRange)
+        {
+            FacingDirection = CardinalDirection(_player.position - transform.position);
+            _ctrl.TriggerAttack();
+            return;
+        }
+
+        if (_isStepping || _stepCooldownTimer > 0f) return;
+
+        if (tilesDist < archerKiteDistance)
+        {
+            Vector2 awayDir = CardinalDirection(transform.position - _player.position);
+            if (!WouldHitObstacle(awayDir))
+            {
+                StartCoroutine(TakeStep(awayDir));
+                return;
+            }
+        }
+
+        Vector2 strafeDir = BestStrafeToAlign(_player.position);
+        if (strafeDir != Vector2.zero)
+            StartCoroutine(TakeStep(strafeDir));
+    }
+
+    private bool IsAxisAligned(Vector3 playerPos)
+    {
+        float dx = Mathf.Abs(playerPos.x - transform.position.x);
+        float dy = Mathf.Abs(playerPos.y - transform.position.y);
+        float tolerance = tileSize * 0.4f;
+        return dx < tolerance || dy < tolerance;
+    }
+
+    private Vector2 BestStrafeToAlign(Vector3 playerPos)
+    {
+        float dx = playerPos.x - transform.position.x;
+        float dy = playerPos.y - transform.position.y;
+
+        Vector2 horizontal = new Vector2(Mathf.Sign(dx), 0f);
+        Vector2 vertical   = new Vector2(0f, Mathf.Sign(dy));
+
+        Vector2 primary   = Mathf.Abs(dx) <= Mathf.Abs(dy) ? horizontal : vertical;
+        Vector2 secondary = Mathf.Abs(dx) <= Mathf.Abs(dy) ? vertical   : horizontal;
+
+        if (!WouldHitObstacle(primary))   return primary;
+        if (!WouldHitObstacle(secondary)) return secondary;
+        return Vector2.zero;
+    }
+
     public void BeginRoam()
     {
         StopAllCoroutines();
@@ -130,18 +193,14 @@ public class EnemyAI : MonoBehaviour
     {
         while (true)
         {
-            // Pick a random adjacent tile direction
             Vector2[] dirs = { Vector2.up, Vector2.down, Vector2.left, Vector2.right };
-            Vector2 dir = dirs[Random.Range(0, dirs.Length)];
-
+            Vector2   dir  = dirs[Random.Range(0, dirs.Length)];
             if (!WouldHitObstacle(dir))
                 yield return StartCoroutine(TakeStep(dir));
-
             yield return new WaitForSeconds(Random.Range(0.5f, 1.5f));
         }
     }
 
-    // ── Chomp (bounces around, damages on contact) ────────────────────────
     private void UpdateChomp()
     {
         if (_isStepping || _stepCooldownTimer > 0f) return;
@@ -160,7 +219,6 @@ public class EnemyAI : MonoBehaviour
             _player.GetComponent<PlayerController>()?.TakeDamage(_stats.attackDamage); // Gagan
     }
 
-    // ── Spawner ───────────────────────────────────────────────────────────
     private void UpdateSpawner()
     {
         if (_stats.spawnPrefab == null || _activeSpawnCount >= _stats.maxSpawnCount) return;
@@ -170,10 +228,9 @@ public class EnemyAI : MonoBehaviour
 
         Vector2 offset = CardinalDirection(Random.insideUnitCircle) * tileSize;
         var go   = Instantiate(_stats.spawnPrefab,
-                               SnapPosition(transform.position + (Vector3)offset),
-                               Quaternion.identity);
+                               SnapPosition(transform.position + (Vector3)offset), Quaternion.identity);
         var ctrl = go.GetComponent<EnemyController>();
-        ctrl?.Init(); // Weihan - SpawnManager also calls this
+        ctrl?.Init(); // Weihan 
         _activeSpawnCount++;
 
         EnemyController.OnEnemyDied += OnChildDied;
@@ -185,12 +242,10 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-    // ── Core tile step coroutine ──────────────────────────────────────────
     private IEnumerator TakeStep(Vector2 direction)
     {
         if (_isStepping) yield break;
-
-        direction = CardinalDirection(direction); // force to cardinal
+        direction = CardinalDirection(direction);
         if (WouldHitObstacle(direction)) yield break;
 
         _isStepping        = true;
@@ -198,23 +253,21 @@ public class EnemyAI : MonoBehaviour
         FacingDirection    = direction;
         FlipSprite(direction);
 
-        Vector2 start  = _rb.position;
-        Vector2 target = SnapPosition(start + direction * tileSize);
+        Vector2 start   = _rb.position;
+        Vector2 target  = SnapPosition(start + direction * tileSize);
         float   elapsed = 0f;
 
         while (elapsed < stepDuration)
         {
-            elapsed     += Time.fixedDeltaTime;
-            float t      = Mathf.Clamp01(elapsed / stepDuration);
-            _rb.MovePosition(Vector2.Lerp(start, target, t));
+            elapsed += Time.fixedDeltaTime;
+            _rb.MovePosition(Vector2.Lerp(start, target, Mathf.Clamp01(elapsed / stepDuration)));
             yield return new WaitForFixedUpdate();
         }
 
-        _rb.MovePosition(target); // guarantee exact grid snap
+        _rb.MovePosition(target);
         _isStepping = false;
     }
 
-    // ── Public API ────────────────────────────────────────────────────────
     public void BeginChase()
     {
         StopAllCoroutines();
@@ -240,21 +293,22 @@ public class EnemyAI : MonoBehaviour
 
     public void SetObstacleLayer(LayerMask layer) => obstacleLayer = layer; // Weihan
 
-    // ── Pathfinding helpers ───────────────────────────────────────────────
+    public void StepInDirection(Vector2 input)
+    {
+        if (_isStepping) return;
+        Vector2 dir = CardinalDirection(input);
+        StartCoroutine(TakeStep(dir));
+    }
 
-    /// Returns the best single cardinal step toward a target, avoiding obstacles.
     private Vector2 BestStepToward(Vector2 target)
     {
-        Vector2 delta = target - (Vector2)transform.position;
-
-        // Try the dominant axis first, then the minor axis, then diagonals
+        Vector2 delta     = target - (Vector2)transform.position;
         Vector2 primary   = Mathf.Abs(delta.x) >= Mathf.Abs(delta.y)
                             ? new Vector2(Mathf.Sign(delta.x), 0)
                             : new Vector2(0, Mathf.Sign(delta.y));
         Vector2 secondary = Mathf.Abs(delta.x) >= Mathf.Abs(delta.y)
                             ? new Vector2(0, Mathf.Sign(delta.y))
                             : new Vector2(Mathf.Sign(delta.x), 0);
-
         if (!WouldHitObstacle(primary))   return primary;
         if (!WouldHitObstacle(secondary)) return secondary;
         return Vector2.zero;
@@ -267,36 +321,24 @@ public class EnemyAI : MonoBehaviour
         return Physics2D.OverlapCircle(next, tileSize * 0.3f, obstacleLayer);
     }
 
-    /// Distance in tiles between this enemy and a world position (rounded to int)
     private float TilesFromTarget(Vector3 target) =>
-        Vector2.Distance(
-            SnapPosition(transform.position),
-            SnapPosition(target)) / tileSize;
-
-    // ── Grid utilities ────────────────────────────────────────────────────
+        Vector2.Distance(SnapPosition(transform.position), SnapPosition(target)) / tileSize;
 
     private Vector2 SnapPosition(Vector3 pos) => SnapPosition((Vector2)pos);
     private Vector2 SnapPosition(Vector2 pos) =>
-        new Vector2(
-            Mathf.Round(pos.x / tileSize) * tileSize,
-            Mathf.Round(pos.y / tileSize) * tileSize);
+        new Vector2(Mathf.Round(pos.x / tileSize) * tileSize,
+                    Mathf.Round(pos.y / tileSize) * tileSize);
 
-    private void SnapToGrid()
-    {
-        Vector2 snapped = SnapPosition(transform.position);
-        _rb.position    = snapped;
-    }
+    private void SnapToGrid() => _rb.position = SnapPosition(transform.position);
 
-    /// Converts any direction to the nearest cardinal (up/down/left/right)
     private Vector2 CardinalDirection(Vector2 dir)
     {
-        if (Mathf.Abs(dir.x) >= Mathf.Abs(dir.y))
-            return new Vector2(Mathf.Sign(dir.x), 0f);
-        else
-            return new Vector2(0f, Mathf.Sign(dir.y));
+        if (dir == Vector2.zero) return Vector2.down;
+        return Mathf.Abs(dir.x) >= Mathf.Abs(dir.y)
+            ? new Vector2(Mathf.Sign(dir.x), 0f)
+            : new Vector2(0f, Mathf.Sign(dir.y));
     }
 
-    // ── Sprite flipping ───────────────────────────────────────────────────
     private void FlipSprite(Vector2 dir)
     {
         var sr = GetComponentInChildren<SpriteRenderer>();

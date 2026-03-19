@@ -12,16 +12,16 @@ public class EnemyController : MonoBehaviour
 
     [Header("Attack Tile")]
     public GameObject attackTilePrefab;
-    public float      tileSize = 0.5f; // must match EnemyAI.tileSize
+    public float      tileSize = 0.5f;
 
     [Header("VFX")]
     public GameObject deathVFXPrefab;
     public GameObject possessedIndicatorPrefab;
 
-    public EnemyState CurrentState    { get; private set; } = EnemyState.Idle;
-    public float      CurrentHP       { get; private set; }
-    public bool       IsPossessed     => CurrentState == EnemyState.Possessed;
-    public bool       IsDead          => CurrentState == EnemyState.Dead;
+    public EnemyState CurrentState     { get; private set; } = EnemyState.Idle;
+    public float      CurrentHP        { get; private set; }
+    public bool       IsPossessed      => CurrentState == EnemyState.Possessed;
+    public bool       IsDead           => CurrentState == EnemyState.Dead;
     public bool       AttackTileActive { get; private set; }
 
     private EnemyAI       _ai;
@@ -157,43 +157,54 @@ public class EnemyController : MonoBehaviour
         SetState(_ai.GetResumeState());
     }
 
-    // Attack tile appears exactly one tile in front of the enemy's facing direction
     private IEnumerator SwordAttack()
     {
         _anim?.PlayAttack();
 
-        // Use FacingDirection from EnemyAI — the direction the enemy last moved/faced
-        Vector3 tilePos  = transform.position + (Vector3)(_ai.FacingDirection * tileSize);
-        _activeTile      = SpawnAttackTile(tilePos, tileSize);
+        Vector2 fwd   = _ai.FacingDirection;
+        Vector2 perp  = new Vector2(-fwd.y, fwd.x);
+
+        Vector3 centerTile = transform.position + (Vector3)(fwd * tileSize);
+        Vector3 leftTile   = centerTile + (Vector3)(perp * tileSize);
+        Vector3 rightTile  = centerTile - (Vector3)(perp * tileSize);
+
+        var tileCenter = SpawnAttackTile(centerTile, tileSize);
+        var tileLeft   = SpawnAttackTile(leftTile,   tileSize);
+        var tileRight  = SpawnAttackTile(rightTile,  tileSize);
         AttackTileActive = true;
 
-        // Wait long enough for the attack animation to play — tune to your frame count
         yield return new WaitForSeconds(0.4f);
 
-        // Damage anything on that tile
-        Collider2D[] hits = Physics2D.OverlapBoxAll(tilePos, Vector2.one * tileSize * 0.9f, 0f);
-        foreach (var h in hits)
-            h.GetComponent<PlayerController>()?.TakeDamage(stats.attackDamage); // Gagan
+        Vector3[] tilePositions = { centerTile, leftTile, rightTile };
+        foreach (var pos in tilePositions)
+        {
+            Collider2D[] hits = Physics2D.OverlapBoxAll(pos, Vector2.one * tileSize * 0.85f, 0f);
+            foreach (var h in hits)
+                h.GetComponent<PlayerController>()?.TakeDamage(stats.attackDamage); // Gagan
+        }
 
         yield return new WaitForSeconds(0.2f);
-        DestroyActiveTile();
-        AttackTileActive = false;
 
-        // Let the attack animation finish before returning to idle/chase
+        if (tileCenter) Destroy(tileCenter);
+        if (tileLeft)   Destroy(tileLeft);
+        if (tileRight)  Destroy(tileRight);
+        AttackTileActive = false;
         _anim?.PlayIdle();
     }
 
+    // EnemyAI already guarantees the archer is axis-aligned before calling this.
     private IEnumerator ArcherAttack()
     {
         _anim?.PlayAttack();
-        yield return new WaitForSeconds(0.3f);
 
-        GameObject arrow = new GameObject("Arrow");
-        arrow.transform.position = transform.position;
-        var proj = arrow.AddComponent<ArrowProjectile>();
+        yield return new WaitForSeconds(0.35f);
+
+        GameObject arrowGO = new GameObject("Arrow");
+        arrowGO.transform.position = transform.position;
+        var proj = arrowGO.AddComponent<ArrowProjectile>();
         proj.Init(_ai.FacingDirection, stats.arrowSpeed, stats.attackDamage, gameObject);
 
-        yield return new WaitForSeconds(0.2f);
+        yield return new WaitForSeconds(0.15f);
         _anim?.PlayIdle();
     }
 
@@ -205,7 +216,7 @@ public class EnemyController : MonoBehaviour
         float   bashTime = 0.3f;
         float   speed    = (stats.bashDistance * tileSize) / bashTime;
 
-        _activeTile      = SpawnAttackTile(transform.position + (Vector3)(bashDir * tileSize), tileSize);
+        var bashTile     = SpawnAttackTile(transform.position + (Vector3)(bashDir * tileSize), tileSize);
         AttackTileActive = true;
 
         var rb = GetComponent<Rigidbody2D>();
@@ -219,7 +230,7 @@ public class EnemyController : MonoBehaviour
             yield return null;
         }
 
-        DestroyActiveTile();
+        if (bashTile) Destroy(bashTile);
         AttackTileActive = false;
         _anim?.PlayIdle();
     }
@@ -231,7 +242,7 @@ public class EnemyController : MonoBehaviour
         if (player == null) yield break;
 
         Vector3 targetPos = SnapToTile(player.transform.position);
-        _activeTile       = SpawnAttackTile(targetPos, stats.meteorRadius * tileSize);
+        var meteorTile    = SpawnAttackTile(targetPos, stats.meteorRadius * tileSize);
         AttackTileActive  = true;
         yield return new WaitForSeconds(stats.meteorDelay);
 
@@ -239,7 +250,7 @@ public class EnemyController : MonoBehaviour
         foreach (var h in hits)
             h.GetComponent<PlayerController>()?.TakeDamage(stats.attackDamage); // Gagan
 
-        DestroyActiveTile();
+        if (meteorTile) Destroy(meteorTile);
         AttackTileActive = false;
         _anim?.PlayIdle();
     }
@@ -276,10 +287,8 @@ public class EnemyController : MonoBehaviour
     }
 
     private Vector3 SnapToTile(Vector3 pos) =>
-        new Vector3(
-            Mathf.Round(pos.x / tileSize) * tileSize,
-            Mathf.Round(pos.y / tileSize) * tileSize,
-            pos.z);
+        new Vector3(Mathf.Round(pos.x / tileSize) * tileSize,
+                    Mathf.Round(pos.y / tileSize) * tileSize, pos.z);
 
     private GameObject SpawnAttackTile(Vector3 pos, float size)
     {
@@ -323,10 +332,11 @@ public class ArrowProjectile : MonoBehaviour
         _speed  = speed;
         _damage = damage;
         _owner  = owner;
+
         var col       = gameObject.AddComponent<CircleCollider2D>();
         col.isTrigger = true;
-        col.radius    = 0.12f;
-        Destroy(gameObject, 4f);
+        col.radius    = 0.1f;
+        Destroy(gameObject, 5f);
     }
 
     private void Update() => transform.Translate(_dir * _speed * Time.deltaTime, Space.World);
@@ -334,6 +344,7 @@ public class ArrowProjectile : MonoBehaviour
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (other.gameObject == _owner) return;
+        if (other.isTrigger) return; 
         other.GetComponent<PlayerController>()?.TakeDamage(_damage); // Gagan
         Destroy(gameObject);
     }
