@@ -1,22 +1,22 @@
 using System.Collections;
 using UnityEngine;
 
-[RequireComponent(typeof(Rigidbody2D))]
+// NO RequireComponent here — avoids Unity auto-adding this to enemy prefabs
 public class PlayerController : MonoBehaviour
 {
     [Header("Movement")]
     public float speed = 2f;
 
     [Header("Dash")]
-    public float dashSpeed    = 14f;  
-    public float dashDuration = 0.12f; 
+    public float dashSpeed    = 14f;
+    public float dashDuration = 0.12f;
     public float dashCooldown = 0.7f;
 
     [Header("Health")]
     public int maxHealth = 100;
 
     [Header("Possession")]
-    [Tooltip("Max world distance to possess. Should be ~1.5 tiles = 0.75 for 0.5-unit tiles.")]
+    [Tooltip("Max world distance to possess (1.5 tiles = 0.75 for 0.5-unit tiles)")]
     public float possessionRange = 0.75f;
 
     public int  CurrentHealth { get; private set; }
@@ -26,32 +26,46 @@ public class PlayerController : MonoBehaviour
     public bool IsPossessing  => PossessionSystem.Instance != null &&
                                  PossessionSystem.Instance.IsPossessing;
 
-    public static event System.Action<int, int> OnHealthChanged; // Gagan
-    public static event System.Action           OnPlayerDied;    // Gagan + Charan 
+    public static event System.Action<int, int> OnHealthChanged; // Gagan - UIManager
+    public static event System.Action           OnPlayerDied;    // Gagan - UIManager + Charan - ScoreManager
 
     private Rigidbody2D    _rb;
     private Animator       _anim;
     private SpriteRenderer _sr;
 
     private Vector2 _movement;
-    private Vector2 _lastMoveDir = Vector2.down;
     private int     _facingDirection = 1;
     private float   _dashCooldownTimer;
 
-    private void Start()
+    private void Awake()
     {
-        _rb  = GetComponent<Rigidbody2D>();
-        _rb.freezeRotation = true;
-        _rb.gravityScale   = 0f;
+        // Guard: this script must only run on the Player — bail out if on anything else
+        if (!CompareTag("Player"))
+        {
+            Debug.LogError($"PlayerController found on non-Player object '{gameObject.name}' — disabling.");
+            enabled = false;
+            return;
+        }
 
+        _rb  = GetComponent<Rigidbody2D>();
         _anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>();
         _sr   = GetComponent<SpriteRenderer>() ?? GetComponentInChildren<SpriteRenderer>();
 
-        CurrentHealth = maxHealth;
+        if (_rb == null)
+            Debug.LogError("PlayerController: no Rigidbody2D found on Player.");
+    }
+
+    private void Start()
+    {
+        if (!CompareTag("Player")) return;
+        _rb.freezeRotation = true;
+        _rb.gravityScale   = 0f;
+        CurrentHealth      = maxHealth;
     }
 
     private void Update()
     {
+        if (!CompareTag("Player")) return;
         if (IsDead || IsPossessing || IsDashing) return;
 
         _dashCooldownTimer -= Time.deltaTime;
@@ -60,31 +74,27 @@ public class PlayerController : MonoBehaviour
         float v = Input.GetAxisRaw("Vertical");
         _movement = new Vector2(h, v).normalized;
 
-        if (_movement != Vector2.zero)
-            _lastMoveDir = _movement;
-
         SetAnimFloat("Speed", _movement.sqrMagnitude);
 
         if (_movement.x != 0)
             _facingDirection = _movement.x > 0 ? -1 : 1;
         transform.localScale = new Vector2(_facingDirection, 1);
 
-        // Dash : Space bar
         if (Input.GetKeyDown(KeyCode.Space) && _dashCooldownTimer <= 0f && _movement != Vector2.zero)
             StartCoroutine(DashCoroutine(_movement));
 
-        // Possess : E key, adjacent enemy required
         if (Input.GetKeyDown(KeyCode.E))
             TryPossessAdjacent();
     }
 
     private void FixedUpdate()
     {
+        if (!CompareTag("Player")) return;
         if (IsDead || IsPossessing || IsDashing) return;
-        _rb.velocity = _movement * speed; // Charan 
+        _rb.velocity = _movement * speed; // Charan - StatManager may call SetSpeed()
     }
 
-    
+    // ── Dash ──────────────────────────────────────────────────────────────
     private IEnumerator DashCoroutine(Vector2 direction)
     {
         IsDashing          = true;
@@ -101,17 +111,26 @@ public class PlayerController : MonoBehaviour
 
         _rb.velocity = Vector2.zero;
         IsDashing    = false;
-
-        yield return null;
+        yield return null; // one extra frame of iframes
         IsInvincible = false;
     }
 
+    // ── Possession ────────────────────────────────────────────────────────
     private void TryPossessAdjacent()
     {
         if (PossessionSystem.Instance == null) return;
 
+        // Use layer index looked up at runtime — works regardless of layer order
+        int enemyLayer = LayerMask.NameToLayer("Enemy");
+        if (enemyLayer == -1)
+        {
+            Debug.LogWarning("PlayerController: 'Enemy' layer not found. Create it in Project Settings.");
+            return;
+        }
+        LayerMask enemyMask = 1 << enemyLayer;
+
         Collider2D[] nearby = Physics2D.OverlapCircleAll(
-            transform.position, possessionRange, LayerMask.GetMask("Enemy"));
+            transform.position, possessionRange, enemyMask);
 
         EnemyController closest = null;
         float minDist = float.MaxValue;
@@ -125,14 +144,18 @@ public class PlayerController : MonoBehaviour
         }
 
         if (closest != null)
-            PossessionSystem.Instance.TryPossessTarget(closest); // Terry 
+            PossessionSystem.Instance.TryPossessTarget(closest); // Terry - PossessionSystem
+        else
+            Debug.Log("PlayerController: no possessable enemy in range.");
     }
 
-    public void TakeDamage(float amount) // Terry 
+    // ── Damage ────────────────────────────────────────────────────────────
+    public void TakeDamage(float amount) // Terry - EnemyController
     {
+        if (!CompareTag("Player")) return; // safety guard
         if (IsDead || IsInvincible) return;
         CurrentHealth = Mathf.Max(0, CurrentHealth - Mathf.RoundToInt(amount));
-        OnHealthChanged?.Invoke(CurrentHealth, maxHealth); // Gagan 
+        OnHealthChanged?.Invoke(CurrentHealth, maxHealth); // Gagan - UIManager
         if (CurrentHealth <= 0) Die();
     }
 
@@ -142,19 +165,20 @@ public class PlayerController : MonoBehaviour
         IsDead       = true;
         _rb.velocity = Vector2.zero;
         SetAnimFloat("Speed", 0);
-        OnPlayerDied?.Invoke(); // Gagan + Charan 
+        OnPlayerDied?.Invoke(); // Gagan - UIManager + Charan - ScoreManager
     }
 
-    public void OnPossessionStart(EnemyController possessed) // Terry 
+    // ── Possession hooks ──────────────────────────────────────────────────
+    public void OnPossessionStart(EnemyController possessed) // Terry - PossessionSystem
     {
-        if (_sr) _sr.enabled = false;
+        if (_sr != null) _sr.enabled = false;
         _rb.velocity = Vector2.zero;
         SetAnimFloat("Speed", 0);
     }
 
     public void OnPossessionEnd()
     {
-        if (_sr) _sr.enabled = true;
+        if (_sr != null) _sr.enabled = true;
     }
 
     private void OnEnable()  => PossessionSystem.OnPossessionChanged += HandlePossessionChanged; // Terry
@@ -165,16 +189,17 @@ public class PlayerController : MonoBehaviour
         if (!started) OnPossessionEnd();
     }
 
-    public void SetMaxHealth(int value) // Charan 
+    // ── Public stat setters ───────────────────────────────────────────────
+    public void SetMaxHealth(int value) // Charan - StatManager
     {
         maxHealth     = value;
         CurrentHealth = Mathf.Min(CurrentHealth, maxHealth);
         OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
     }
 
-    public void SetSpeed(float value) => speed = value; // Charan 
+    public void SetSpeed(float value) => speed = value; // Charan - StatManager
 
-    public void Heal(int amount) // Charan 
+    public void Heal(int amount) // Charan - ItemSystem
     {
         if (IsDead) return;
         CurrentHealth = Mathf.Min(maxHealth, CurrentHealth + amount);
@@ -186,9 +211,11 @@ public class PlayerController : MonoBehaviour
         if (_anim != null) _anim.SetFloat(param, value);
     }
 
-    private void OnDrawGizmosSelected()
+    // Gizmo: always draws (not just when selected) so you can always see possession range
+    private void OnDrawGizmos()
     {
-        Gizmos.color = Color.yellow;
+        if (!Application.isPlaying && !CompareTag("Player")) return;
+        Gizmos.color = new Color(1f, 0.9f, 0f, 0.6f);
         Gizmos.DrawWireSphere(transform.position, possessionRange);
     }
 }

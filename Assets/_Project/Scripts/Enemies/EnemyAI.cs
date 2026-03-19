@@ -17,7 +17,7 @@ public class EnemyAI : MonoBehaviour
     public int archerKiteDistance = 3;
 
     [Header("Pathfinding")]
-    public LayerMask obstacleLayer; // Weihan 
+    public LayerMask obstacleLayer; // Weihan - ObstacleSystem
 
     private EnemyController _ctrl;
     private Rigidbody2D     _rb;
@@ -86,6 +86,7 @@ public class EnemyAI : MonoBehaviour
         UpdateHunter();
     }
 
+    // ── Standard melee hunter (Swordsman, Warrior, Tank, Mage) ───────────
     private void UpdateHunter()
     {
         if (_player == null) return;
@@ -115,12 +116,14 @@ public class EnemyAI : MonoBehaviour
             StartCoroutine(TakeStep(stepDir));
     }
 
+    // ── Archer: keeps distance, shoots when axis-aligned ─────────────────
     private void UpdateArcher()
     {
         if (_player == null) return;
 
         float dist = Vector2.Distance(transform.position, _player.position);
 
+        // Detection
         if (_ctrl.CurrentState == EnemyController.EnemyState.Idle ||
             _ctrl.CurrentState == EnemyController.EnemyState.Roaming)
         {
@@ -135,8 +138,10 @@ public class EnemyAI : MonoBehaviour
         bool  axisAligned = IsAxisAligned(_player.position);
         bool  inRange     = tilesDist <= archerShootRange;
 
+        // Shoot if aligned and in range
         if (axisAligned && inRange)
         {
+            // Face toward player along the aligned axis
             FacingDirection = CardinalDirection(_player.position - transform.position);
             _ctrl.TriggerAttack();
             return;
@@ -144,6 +149,7 @@ public class EnemyAI : MonoBehaviour
 
         if (_isStepping || _stepCooldownTimer > 0f) return;
 
+        // Kite: back away if player is too close
         if (tilesDist < archerKiteDistance)
         {
             Vector2 awayDir = CardinalDirection(transform.position - _player.position);
@@ -154,11 +160,13 @@ public class EnemyAI : MonoBehaviour
             }
         }
 
+        // Strafe to get axis-aligned with the player
         Vector2 strafeDir = BestStrafeToAlign(_player.position);
         if (strafeDir != Vector2.zero)
             StartCoroutine(TakeStep(strafeDir));
     }
 
+    // Returns true if player is on exact same row OR same column (within half a tile tolerance)
     private bool IsAxisAligned(Vector3 playerPos)
     {
         float dx = Mathf.Abs(playerPos.x - transform.position.x);
@@ -167,14 +175,17 @@ public class EnemyAI : MonoBehaviour
         return dx < tolerance || dy < tolerance;
     }
 
+    // Steps to get on the same row or column as the player
     private Vector2 BestStrafeToAlign(Vector3 playerPos)
     {
         float dx = playerPos.x - transform.position.x;
         float dy = playerPos.y - transform.position.y;
 
+        // Move on the axis that brings us closer to alignment
         Vector2 horizontal = new Vector2(Mathf.Sign(dx), 0f);
         Vector2 vertical   = new Vector2(0f, Mathf.Sign(dy));
 
+        // Prefer smaller delta axis (get aligned faster)
         Vector2 primary   = Mathf.Abs(dx) <= Mathf.Abs(dy) ? horizontal : vertical;
         Vector2 secondary = Mathf.Abs(dx) <= Mathf.Abs(dy) ? vertical   : horizontal;
 
@@ -183,6 +194,7 @@ public class EnemyAI : MonoBehaviour
         return Vector2.zero;
     }
 
+    // ── Roaming ───────────────────────────────────────────────────────────
     public void BeginRoam()
     {
         StopAllCoroutines();
@@ -201,6 +213,7 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
+    // ── Chomp ─────────────────────────────────────────────────────────────
     private void UpdateChomp()
     {
         if (_isStepping || _stepCooldownTimer > 0f) return;
@@ -219,6 +232,7 @@ public class EnemyAI : MonoBehaviour
             _player.GetComponent<PlayerController>()?.TakeDamage(_stats.attackDamage); // Gagan
     }
 
+    // ── Spawner ───────────────────────────────────────────────────────────
     private void UpdateSpawner()
     {
         if (_stats.spawnPrefab == null || _activeSpawnCount >= _stats.maxSpawnCount) return;
@@ -230,7 +244,7 @@ public class EnemyAI : MonoBehaviour
         var go   = Instantiate(_stats.spawnPrefab,
                                SnapPosition(transform.position + (Vector3)offset), Quaternion.identity);
         var ctrl = go.GetComponent<EnemyController>();
-        ctrl?.Init(); // Weihan 
+        ctrl?.Init(); // Weihan - SpawnManager also calls this
         _activeSpawnCount++;
 
         EnemyController.OnEnemyDied += OnChildDied;
@@ -242,6 +256,7 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
+    // ── Core tile step ────────────────────────────────────────────────────
     private IEnumerator TakeStep(Vector2 direction)
     {
         if (_isStepping) yield break;
@@ -268,6 +283,7 @@ public class EnemyAI : MonoBehaviour
         _isStepping = false;
     }
 
+    // ── Public API ────────────────────────────────────────────────────────
     public void BeginChase()
     {
         StopAllCoroutines();
@@ -293,6 +309,7 @@ public class EnemyAI : MonoBehaviour
 
     public void SetObstacleLayer(LayerMask layer) => obstacleLayer = layer; // Weihan
 
+    // Called by PossessionSystem while player controls this enemy
     public void StepInDirection(Vector2 input)
     {
         if (_isStepping) return;
@@ -300,6 +317,7 @@ public class EnemyAI : MonoBehaviour
         StartCoroutine(TakeStep(dir));
     }
 
+    // ── Pathfinding helpers ───────────────────────────────────────────────
     private Vector2 BestStepToward(Vector2 target)
     {
         Vector2 delta     = target - (Vector2)transform.position;
@@ -324,6 +342,7 @@ public class EnemyAI : MonoBehaviour
     private float TilesFromTarget(Vector3 target) =>
         Vector2.Distance(SnapPosition(transform.position), SnapPosition(target)) / tileSize;
 
+    // ── Grid utilities ────────────────────────────────────────────────────
     private Vector2 SnapPosition(Vector3 pos) => SnapPosition((Vector2)pos);
     private Vector2 SnapPosition(Vector2 pos) =>
         new Vector2(Mathf.Round(pos.x / tileSize) * tileSize,

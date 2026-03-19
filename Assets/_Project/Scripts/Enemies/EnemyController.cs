@@ -14,6 +14,10 @@ public class EnemyController : MonoBehaviour
     public GameObject attackTilePrefab;
     public float      tileSize = 0.5f;
 
+    [Header("Arrow")]
+    [Tooltip("Drag your Arrow prefab here on the Archer prefab.")]
+    public GameObject arrowPrefab;
+
     [Header("VFX")]
     public GameObject deathVFXPrefab;
     public GameObject possessedIndicatorPrefab;
@@ -28,7 +32,6 @@ public class EnemyController : MonoBehaviour
     private EnemyAnimator _anim;
     private float         _attackCooldownTimer;
     private float         _possessionTimer;
-    private GameObject    _activeTile;
     private GameObject    _possessedIndicator;
     private Collider2D    _col;
 
@@ -157,57 +160,75 @@ public class EnemyController : MonoBehaviour
         SetState(_ai.GetResumeState());
     }
 
+    // ── Sword: 3-tile wide arc ────────────────────────────────────────────
     private IEnumerator SwordAttack()
     {
         _anim?.PlayAttack();
 
-        Vector2 fwd   = _ai.FacingDirection;
-        Vector2 perp  = new Vector2(-fwd.y, fwd.x);
+        Vector2 fwd  = _ai.FacingDirection;
+        Vector2 perp = new Vector2(-fwd.y, fwd.x);
 
-        Vector3 centerTile = transform.position + (Vector3)(fwd * tileSize);
-        Vector3 leftTile   = centerTile + (Vector3)(perp * tileSize);
-        Vector3 rightTile  = centerTile - (Vector3)(perp * tileSize);
+        Vector3 centerTile = transform.position + (Vector3)(fwd  * tileSize);
+        Vector3 leftTile   = centerTile          + (Vector3)(perp * tileSize);
+        Vector3 rightTile  = centerTile          - (Vector3)(perp * tileSize);
 
-        var tileCenter = SpawnAttackTile(centerTile, tileSize);
-        var tileLeft   = SpawnAttackTile(leftTile,   tileSize);
-        var tileRight  = SpawnAttackTile(rightTile,  tileSize);
+        var tc = SpawnAttackTile(centerTile, tileSize);
+        var tl = SpawnAttackTile(leftTile,   tileSize);
+        var tr = SpawnAttackTile(rightTile,  tileSize);
         AttackTileActive = true;
 
         yield return new WaitForSeconds(0.4f);
 
-        Vector3[] tilePositions = { centerTile, leftTile, rightTile };
-        foreach (var pos in tilePositions)
+        foreach (var pos in new[] { centerTile, leftTile, rightTile })
         {
-            Collider2D[] hits = Physics2D.OverlapBoxAll(pos, Vector2.one * tileSize * 0.85f, 0f);
+            var hits = Physics2D.OverlapBoxAll(pos, Vector2.one * tileSize * 0.85f, 0f);
             foreach (var h in hits)
                 h.GetComponent<PlayerController>()?.TakeDamage(stats.attackDamage); // Gagan
         }
 
         yield return new WaitForSeconds(0.2f);
-
-        if (tileCenter) Destroy(tileCenter);
-        if (tileLeft)   Destroy(tileLeft);
-        if (tileRight)  Destroy(tileRight);
+        if (tc) Destroy(tc);
+        if (tl) Destroy(tl);
+        if (tr) Destroy(tr);
         AttackTileActive = false;
         _anim?.PlayIdle();
     }
 
-    // EnemyAI already guarantees the archer is axis-aligned before calling this.
+    // ── Archer: fires arrow prefab along facing axis ──────────────────────
     private IEnumerator ArcherAttack()
     {
         _anim?.PlayAttack();
-
         yield return new WaitForSeconds(0.35f);
 
-        GameObject arrowGO = new GameObject("Arrow");
-        arrowGO.transform.position = transform.position;
-        var proj = arrowGO.AddComponent<ArrowProjectile>();
-        proj.Init(_ai.FacingDirection, stats.arrowSpeed, stats.attackDamage, gameObject);
+        if (arrowPrefab != null)
+        {
+            // Instantiate the actual Arrow prefab — sprite comes with it
+            GameObject arrowGO = Instantiate(arrowPrefab, transform.position, Quaternion.identity);
+            var proj = arrowGO.GetComponent<ArrowProjectile>();
+
+            if (proj == null)
+                proj = arrowGO.AddComponent<ArrowProjectile>();
+
+            proj.Init(_ai.FacingDirection, stats.arrowSpeed, stats.attackDamage, gameObject);
+        }
+        else
+        {
+            // Fallback: plain white arrow if no prefab assigned (editor warning)
+            Debug.LogWarning($"{gameObject.name}: arrowPrefab not assigned on EnemyController. " +
+                             "Drag your Arrow prefab into the 'Arrow Prefab' field on the Archer prefab.");
+            GameObject arrowGO = new GameObject("Arrow_fallback");
+            arrowGO.transform.position = transform.position;
+            var sr = arrowGO.AddComponent<SpriteRenderer>();
+            sr.color = Color.white;
+            var proj = arrowGO.AddComponent<ArrowProjectile>();
+            proj.Init(_ai.FacingDirection, stats.arrowSpeed, stats.attackDamage, gameObject);
+        }
 
         yield return new WaitForSeconds(0.15f);
         _anim?.PlayIdle();
     }
 
+    // ── Tank bash ─────────────────────────────────────────────────────────
     private IEnumerator TankAttack()
     {
         _anim?.PlayAttack();
@@ -224,8 +245,8 @@ public class EnemyController : MonoBehaviour
         {
             rb.MovePosition(rb.position + bashDir * speed * Time.fixedDeltaTime);
             elapsed += Time.deltaTime;
-            Collider2D hit = Physics2D.OverlapCircle(transform.position, tileSize * 0.4f,
-                                 LayerMask.GetMask("Player"));
+            var hit = Physics2D.OverlapCircle(transform.position, tileSize * 0.4f,
+                          LayerMask.GetMask("Player"));
             hit?.GetComponent<PlayerController>()?.TakeDamage(stats.bashDamage); // Gagan
             yield return null;
         }
@@ -235,6 +256,7 @@ public class EnemyController : MonoBehaviour
         _anim?.PlayIdle();
     }
 
+    // ── Mage meteor ───────────────────────────────────────────────────────
     private IEnumerator MageAttack()
     {
         _anim?.PlayAttack();
@@ -246,7 +268,7 @@ public class EnemyController : MonoBehaviour
         AttackTileActive  = true;
         yield return new WaitForSeconds(stats.meteorDelay);
 
-        Collider2D[] hits = Physics2D.OverlapCircleAll(targetPos, stats.meteorRadius * tileSize);
+        var hits = Physics2D.OverlapCircleAll(targetPos, stats.meteorRadius * tileSize);
         foreach (var h in hits)
             h.GetComponent<PlayerController>()?.TakeDamage(stats.attackDamage); // Gagan
 
@@ -298,12 +320,6 @@ public class EnemyController : MonoBehaviour
         return tile;
     }
 
-    private void DestroyActiveTile()
-    {
-        if (_activeTile) Destroy(_activeTile);
-        _activeTile = null;
-    }
-
     public EnemyStats.EnemyType GetEnemyType() => stats.enemyType;
 
     public bool UsePossessedAbility()
@@ -319,32 +335,56 @@ public class EnemyController : MonoBehaviour
     }
 }
 
+// ── Arrow projectile ──────────────────────────────────────────────────────
+// Add this component to your Arrow prefab, OR it gets added automatically.
+// The prefab's own SpriteRenderer provides the visual.
 public class ArrowProjectile : MonoBehaviour
 {
     private Vector2    _dir;
     private float      _speed;
     private float      _damage;
     private GameObject _owner;
+    private bool       _initialised;
 
     public void Init(Vector2 direction, float speed, float damage, GameObject owner)
     {
-        _dir    = direction.normalized;
-        _speed  = speed;
-        _damage = damage;
-        _owner  = owner;
+        _dir         = direction.normalized;
+        _speed       = speed;
+        _damage      = damage;
+        _owner       = owner;
+        _initialised = true;
 
-        var col       = gameObject.AddComponent<CircleCollider2D>();
-        col.isTrigger = true;
-        col.radius    = 0.1f;
+        // Rotate the arrow sprite to face its direction
+        float angle = Mathf.Atan2(_dir.y, _dir.x) * Mathf.Rad2Deg;
+        transform.rotation = Quaternion.AngleAxis(angle, Vector3.forward);
+
+        // Only add collider if the prefab doesn't already have one
+        if (GetComponent<Collider2D>() == null)
+        {
+            var col       = gameObject.AddComponent<CircleCollider2D>();
+            col.isTrigger = true;
+            col.radius    = 0.1f;
+        }
+        else
+        {
+            // Make sure whatever collider is on the prefab is a trigger
+            GetComponent<Collider2D>().isTrigger = true;
+        }
+
         Destroy(gameObject, 5f);
     }
 
-    private void Update() => transform.Translate(_dir * _speed * Time.deltaTime, Space.World);
+    private void Update()
+    {
+        if (!_initialised) return;
+        transform.Translate(Vector2.right * _speed * Time.deltaTime); // local right = facing direction
+    }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
+        if (!_initialised) return;
         if (other.gameObject == _owner) return;
-        if (other.isTrigger) return; 
+        if (other.isTrigger) return; // ignore attack tiles and other triggers
         other.GetComponent<PlayerController>()?.TakeDamage(_damage); // Gagan
         Destroy(gameObject);
     }
