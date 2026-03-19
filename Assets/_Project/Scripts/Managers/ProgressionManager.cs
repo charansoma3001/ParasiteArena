@@ -42,14 +42,14 @@ public class ProgressionManager : MonoBehaviour
     public void AddXP(int amount)
     {
         CurrentXP += amount;
-        
-        // Announce to the rest of the game that XP changed (Gagan's UI will listen for this)
-        OnXPAdded?.Invoke(CurrentXP, XPToNextLevel);
 
         if (CurrentXP >= XPToNextLevel)
         {
             LevelUp();
         }
+
+        // Announce to the rest of the game that XP changed (Gagan's UI will listen for this)
+        OnXPAdded?.Invoke(CurrentXP, XPToNextLevel);
     }
 
     private void LevelUp()

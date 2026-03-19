@@ -106,9 +106,9 @@ public class ShopManager : MonoBehaviour
     private void RefreshButtonStates()
     {
         // If they don't have enough gold for the remaining items, disable those buttons
-        if (nameText1.text != "SOLD") button1.interactable = ProgressionManager.Instance.CurrentGold >= currentShopUpgrades[0].goldCost;
-        if (nameText2.text != "SOLD") button2.interactable = ProgressionManager.Instance.CurrentGold >= currentShopUpgrades[1].goldCost;
-        if (nameText3.text != "SOLD") button3.interactable = ProgressionManager.Instance.CurrentGold >= currentShopUpgrades[2].goldCost;
+        if (costText1.text != "SOLD") button1.interactable = ProgressionManager.Instance.CurrentGold >= currentShopUpgrades[0].goldCost;
+        if (costText2.text != "SOLD") button2.interactable = ProgressionManager.Instance.CurrentGold >= currentShopUpgrades[1].goldCost;
+        if (costText3.text != "SOLD") button3.interactable = ProgressionManager.Instance.CurrentGold >= currentShopUpgrades[2].goldCost;
     }
 
     // For testing in the sandbox: Press 'B' to open/close the shop

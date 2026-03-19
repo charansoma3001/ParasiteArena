@@ -1,10 +1,12 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class StatManager : MonoBehaviour
 {
     // 1. Singleton Setup
     public static StatManager Instance { get; private set; }
+    private PlayerController playerController;
 
     // 2. A mini-class to set up starting values in the Unity Inspector
     [System.Serializable]
@@ -81,6 +83,25 @@ public class StatManager : MonoBehaviour
                 }
             }
         }
+
+        ApplyStatsToPlayer();
+    }
+
+    private void ApplyStatsToPlayer()
+    {
+        if (playerController == null)
+        {
+            playerController = FindObjectOfType<PlayerController>();
+        }
+
+        if (playerController == null)
+        {
+            Debug.LogWarning("StatManager couldn't find PlayerController to apply stats.");
+            return;
+        }
+
+        playerController.SetMaxHealth((int)(currentStats.ContainsKey(StatType.MaxHealth) ? currentStats[StatType.MaxHealth] : 100f));
+        playerController.SetSpeed(currentStats.ContainsKey(StatType.MovementSpeed) ? currentStats[StatType.MovementSpeed] : 5f);
     }
 
     // --- HOW THE REST OF THE TEAM GETS THE STATS ---
