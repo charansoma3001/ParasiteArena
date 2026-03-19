@@ -21,7 +21,7 @@ public class ProgressionManager : MonoBehaviour
 
     private void Update() 
     {
-        if (Input.GetKeyDown(KeyCode.Space)) AddXP(45);
+        if (Input.GetKeyDown(KeyCode.P)) AddXP(45);
         if (Input.GetKeyDown(KeyCode.G)) AddGold(10);
     }
 

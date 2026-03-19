@@ -86,11 +86,23 @@ public class EnemyAI : MonoBehaviour
         UpdateHunter();
     }
 
+    // Returns target position — possessed enemy if one exists, otherwise the player.
+    // Makes non-possessed enemies chase and attack the possessed body.
+    private Vector3 GetTargetPosition()
+    {
+        if (PossessionSystem.Instance != null &&
+            PossessionSystem.Instance.IsPossessing &&
+            PossessionSystem.Instance.PossessedEnemy != null &&
+            PossessionSystem.Instance.PossessedEnemy.gameObject != gameObject)
+            return PossessionSystem.Instance.PossessedEnemy.transform.position;
+        return _player != null ? _player.position : transform.position;
+    }
+
     // ── Standard melee hunter (Swordsman, Warrior, Tank, Mage) ───────────
     private void UpdateHunter()
     {
-        if (_player == null) return;
-        float dist = Vector2.Distance(transform.position, _player.position);
+        Vector3 targetPos = GetTargetPosition();
+        float   dist      = Vector2.Distance(transform.position, targetPos);
 
         if (_ctrl.CurrentState == EnemyController.EnemyState.Idle ||
             _ctrl.CurrentState == EnemyController.EnemyState.Roaming)
@@ -102,16 +114,16 @@ public class EnemyAI : MonoBehaviour
         if (_ctrl.CurrentState != EnemyController.EnemyState.Chasing) return;
         if (_isStepping) return;
 
-        float tilesDist = TilesFromTarget(_player.position);
+        float tilesDist = TilesFromTarget(targetPos);
         if (tilesDist <= _stats.attackRange)
         {
-            FacingDirection = CardinalDirection(_player.position - transform.position);
+            FacingDirection = CardinalDirection(targetPos - transform.position);
             _ctrl.TriggerAttack();
             return;
         }
 
         if (_stepCooldownTimer > 0f) return;
-        Vector2 stepDir = BestStepToward(_player.position);
+        Vector2 stepDir = BestStepToward(targetPos);
         if (stepDir != Vector2.zero)
             StartCoroutine(TakeStep(stepDir));
     }
@@ -119,9 +131,8 @@ public class EnemyAI : MonoBehaviour
     // ── Archer: keeps distance, shoots when axis-aligned ─────────────────
     private void UpdateArcher()
     {
-        if (_player == null) return;
-
-        float dist = Vector2.Distance(transform.position, _player.position);
+        Vector3 targetPos = GetTargetPosition();
+        float   dist      = Vector2.Distance(transform.position, targetPos);
 
         // Detection
         if (_ctrl.CurrentState == EnemyController.EnemyState.Idle ||
@@ -134,25 +145,24 @@ public class EnemyAI : MonoBehaviour
         if (_ctrl.CurrentState != EnemyController.EnemyState.Chasing) return;
         if (_ctrl.CurrentState == EnemyController.EnemyState.Attacking) return;
 
-        float tilesDist   = TilesFromTarget(_player.position);
-        bool  axisAligned = IsAxisAligned(_player.position);
+        float tilesDist   = TilesFromTarget(targetPos);
+        bool  axisAligned = IsAxisAligned(targetPos);
         bool  inRange     = tilesDist <= archerShootRange;
 
         // Shoot if aligned and in range
         if (axisAligned && inRange)
         {
-            // Face toward player along the aligned axis
-            FacingDirection = CardinalDirection(_player.position - transform.position);
+            FacingDirection = CardinalDirection(targetPos - transform.position);
             _ctrl.TriggerAttack();
             return;
         }
 
         if (_isStepping || _stepCooldownTimer > 0f) return;
 
-        // Kite: back away if player is too close
+        // Kite: back away if target is too close
         if (tilesDist < archerKiteDistance)
         {
-            Vector2 awayDir = CardinalDirection(transform.position - _player.position);
+            Vector2 awayDir = CardinalDirection(transform.position - (Vector3)targetPos);
             if (!WouldHitObstacle(awayDir))
             {
                 StartCoroutine(TakeStep(awayDir));
@@ -160,8 +170,8 @@ public class EnemyAI : MonoBehaviour
             }
         }
 
-        // Strafe to get axis-aligned with the player
-        Vector2 strafeDir = BestStrafeToAlign(_player.position);
+        // Strafe to get axis-aligned with the target
+        Vector2 strafeDir = BestStrafeToAlign(targetPos);
         if (strafeDir != Vector2.zero)
             StartCoroutine(TakeStep(strafeDir));
     }
