@@ -11,9 +11,13 @@ public class EnemyAI : MonoBehaviour
     public float stepCooldown = 0.35f;
 
     [Header("Archer")]
+<<<<<<< Updated upstream
     [Tooltip("Max tiles away the archer will shoot. Set on ArcherStats ScriptableObject too.")]
     public int archerShootRange = 6;
     [Tooltip("How many tiles away archer tries to keep from the player.")]
+=======
+    public int archerShootRange   = 6;
+>>>>>>> Stashed changes
     public int archerKiteDistance = 3;
 
     [Header("Pathfinding")]
@@ -46,8 +50,13 @@ public class EnemyAI : MonoBehaviour
         _rb.gravityScale   = 0f;
         _stats = _ctrl.stats;
         _anim  = GetComponentInChildren<EnemyAnimator>();
+<<<<<<< Updated upstream
         var playerGO = GameObject.FindWithTag("Player"); // Gagan
         if (playerGO) _player = playerGO.transform;
+=======
+        var p = GameObject.FindWithTag("Player"); // Gagan
+        if (p) _player = p.transform;
+>>>>>>> Stashed changes
     }
 
     private void Start()
@@ -56,7 +65,11 @@ public class EnemyAI : MonoBehaviour
         switch (_stats.enemyType)
         {
             case EnemyStats.EnemyType.Chomp:
+<<<<<<< Updated upstream
                 _chompDir         = CardinalDirection(Random.insideUnitCircle);
+=======
+                _chompDir         = CardinalDir(Random.insideUnitCircle);
+>>>>>>> Stashed changes
                 _chompBounceTimer = ChompBounceInterval;
                 _ctrl.SetState(EnemyController.EnemyState.Roaming);
                 break;
@@ -72,6 +85,8 @@ public class EnemyAI : MonoBehaviour
     private void Update()
     {
         if (_ctrl.IsDead || _ctrl.IsPossessed) return;
+        _anim?.TickMovement(_isStepping);
+        _stepCooldownTimer -= Time.deltaTime;
 
         _anim?.TickMovement(_isStepping);
         _stepCooldownTimer -= Time.deltaTime;
@@ -82,12 +97,20 @@ public class EnemyAI : MonoBehaviour
             case EnemyStats.EnemyType.Spawner: UpdateSpawner(); return;
             case EnemyStats.EnemyType.Archer:  UpdateArcher();  return;
         }
+<<<<<<< Updated upstream
 
         UpdateHunter();
     }
 
     // Returns target position — possessed enemy if one exists, otherwise the player.
     // Makes non-possessed enemies chase and attack the possessed body.
+=======
+        UpdateHunter();
+    }
+
+    // Returns the position enemies should chase.
+    // During possession, non-possessed enemies target the possessed enemy's body.
+>>>>>>> Stashed changes
     private Vector3 GetTargetPosition()
     {
         if (PossessionSystem.Instance != null &&
@@ -98,11 +121,19 @@ public class EnemyAI : MonoBehaviour
         return _player != null ? _player.position : transform.position;
     }
 
+<<<<<<< Updated upstream
     // ── Standard melee hunter (Swordsman, Warrior, Tank, Mage) ───────────
     private void UpdateHunter()
     {
         Vector3 targetPos = GetTargetPosition();
         float   dist      = Vector2.Distance(transform.position, targetPos);
+=======
+    // ── Melee hunter (Swordsman) ──────────────────────────────────────────
+    private void UpdateHunter()
+    {
+        Vector3 target = GetTargetPosition();
+        float   dist   = Vector2.Distance(transform.position, target);
+>>>>>>> Stashed changes
 
         if (_ctrl.CurrentState == EnemyController.EnemyState.Idle ||
             _ctrl.CurrentState == EnemyController.EnemyState.Roaming)
@@ -114,15 +145,23 @@ public class EnemyAI : MonoBehaviour
         if (_ctrl.CurrentState != EnemyController.EnemyState.Chasing) return;
         if (_isStepping) return;
 
+<<<<<<< Updated upstream
         float tilesDist = TilesFromTarget(targetPos);
         if (tilesDist <= _stats.attackRange)
         {
             FacingDirection = CardinalDirection(targetPos - transform.position);
+=======
+        float tilesDist = TilesFrom(target);
+        if (tilesDist <= _stats.attackRange)
+        {
+            FacingDirection = CardinalDir(target - transform.position);
+>>>>>>> Stashed changes
             _ctrl.TriggerAttack();
             return;
         }
 
         if (_stepCooldownTimer > 0f) return;
+<<<<<<< Updated upstream
         Vector2 stepDir = BestStepToward(targetPos);
         if (stepDir != Vector2.zero)
             StartCoroutine(TakeStep(stepDir));
@@ -135,6 +174,18 @@ public class EnemyAI : MonoBehaviour
         float   dist      = Vector2.Distance(transform.position, targetPos);
 
         // Detection
+=======
+        Vector2 step = BestStepToward(target);
+        if (step != Vector2.zero) StartCoroutine(TakeStep(step));
+    }
+
+    // ── Archer: kites, strafes, shoots on cardinal axis alignment ─────────
+    private void UpdateArcher()
+    {
+        Vector3 target = GetTargetPosition();
+        float   dist   = Vector2.Distance(transform.position, target);
+
+>>>>>>> Stashed changes
         if (_ctrl.CurrentState == EnemyController.EnemyState.Idle ||
             _ctrl.CurrentState == EnemyController.EnemyState.Roaming)
         {
@@ -145,6 +196,7 @@ public class EnemyAI : MonoBehaviour
         if (_ctrl.CurrentState != EnemyController.EnemyState.Chasing) return;
         if (_ctrl.CurrentState == EnemyController.EnemyState.Attacking) return;
 
+<<<<<<< Updated upstream
         float tilesDist   = TilesFromTarget(targetPos);
         bool  axisAligned = IsAxisAligned(targetPos);
         bool  inRange     = tilesDist <= archerShootRange;
@@ -153,12 +205,22 @@ public class EnemyAI : MonoBehaviour
         if (axisAligned && inRange)
         {
             FacingDirection = CardinalDirection(targetPos - transform.position);
+=======
+        float tilesDist   = TilesFrom(target);
+        bool  aligned     = IsAxisAligned(target);
+        bool  inRange     = tilesDist <= archerShootRange;
+
+        if (aligned && inRange)
+        {
+            FacingDirection = CardinalDir(target - transform.position);
+>>>>>>> Stashed changes
             _ctrl.TriggerAttack();
             return;
         }
 
         if (_isStepping || _stepCooldownTimer > 0f) return;
 
+<<<<<<< Updated upstream
         // Kite: back away if target is too close
         if (tilesDist < archerKiteDistance)
         {
@@ -199,6 +261,38 @@ public class EnemyAI : MonoBehaviour
         Vector2 primary   = Mathf.Abs(dx) <= Mathf.Abs(dy) ? horizontal : vertical;
         Vector2 secondary = Mathf.Abs(dx) <= Mathf.Abs(dy) ? vertical   : horizontal;
 
+=======
+        // Back away if player is too close
+        if (tilesDist < archerKiteDistance)
+        {
+            Vector2 away = CardinalDir(transform.position - target);
+            if (!WouldHitObstacle(away)) { StartCoroutine(TakeStep(away)); return; }
+        }
+
+        // Strafe to get axis-aligned
+        Vector2 strafe = BestStrafeToAlign(target);
+        if (strafe != Vector2.zero) StartCoroutine(TakeStep(strafe));
+    }
+
+    // True if target is on same row or column within half-tile tolerance
+    private bool IsAxisAligned(Vector3 target)
+    {
+        float tol = tileSize * 0.4f;
+        return Mathf.Abs(target.x - transform.position.x) < tol ||
+               Mathf.Abs(target.y - transform.position.y) < tol;
+    }
+
+    // Steps to get onto the same row or column as the target
+    private Vector2 BestStrafeToAlign(Vector3 target)
+    {
+        float dx = target.x - transform.position.x;
+        float dy = target.y - transform.position.y;
+        Vector2 h = new Vector2(Mathf.Sign(dx), 0f);
+        Vector2 v = new Vector2(0f, Mathf.Sign(dy));
+        // Move on the smaller-delta axis to reach alignment faster
+        Vector2 primary   = Mathf.Abs(dx) <= Mathf.Abs(dy) ? h : v;
+        Vector2 secondary = Mathf.Abs(dx) <= Mathf.Abs(dy) ? v : h;
+>>>>>>> Stashed changes
         if (!WouldHitObstacle(primary))   return primary;
         if (!WouldHitObstacle(secondary)) return secondary;
         return Vector2.zero;
@@ -217,8 +311,12 @@ public class EnemyAI : MonoBehaviour
         {
             Vector2[] dirs = { Vector2.up, Vector2.down, Vector2.left, Vector2.right };
             Vector2   dir  = dirs[Random.Range(0, dirs.Length)];
+<<<<<<< Updated upstream
             if (!WouldHitObstacle(dir))
                 yield return StartCoroutine(TakeStep(dir));
+=======
+            if (!WouldHitObstacle(dir)) yield return StartCoroutine(TakeStep(dir));
+>>>>>>> Stashed changes
             yield return new WaitForSeconds(Random.Range(0.5f, 1.5f));
         }
     }
@@ -227,7 +325,10 @@ public class EnemyAI : MonoBehaviour
     private void UpdateChomp()
     {
         if (_isStepping || _stepCooldownTimer > 0f) return;
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
         _chompBounceTimer -= Time.deltaTime;
         if (_chompBounceTimer <= 0f || WouldHitObstacle(_chompDir))
         {
@@ -235,9 +336,13 @@ public class EnemyAI : MonoBehaviour
             _chompDir         = dirs[Random.Range(0, dirs.Length)];
             _chompBounceTimer = ChompBounceInterval;
         }
+<<<<<<< Updated upstream
 
         StartCoroutine(TakeStep(_chompDir));
 
+=======
+        StartCoroutine(TakeStep(_chompDir));
+>>>>>>> Stashed changes
         if (_player != null && Vector2.Distance(transform.position, _player.position) < tileSize * 0.8f)
             _player.GetComponent<PlayerController>()?.TakeDamage(_stats.attackDamage); // Gagan
     }
@@ -250,13 +355,17 @@ public class EnemyAI : MonoBehaviour
         if (_spawnTimer > 0f) return;
         _spawnTimer = _stats.spawnInterval;
 
+<<<<<<< Updated upstream
         Vector2 offset = CardinalDirection(Random.insideUnitCircle) * tileSize;
         var go   = Instantiate(_stats.spawnPrefab,
                                SnapPosition(transform.position + (Vector3)offset), Quaternion.identity);
+=======
+        Vector2 offset = CardinalDir(Random.insideUnitCircle) * tileSize;
+        var go   = Instantiate(_stats.spawnPrefab, SnapPos(transform.position + (Vector3)offset), Quaternion.identity);
+>>>>>>> Stashed changes
         var ctrl = go.GetComponent<EnemyController>();
         ctrl?.Init(); // Weihan - SpawnManager also calls this
         _activeSpawnCount++;
-
         EnemyController.OnEnemyDied += OnChildDied;
         void OnChildDied(EnemyController dead)
         {
@@ -267,6 +376,7 @@ public class EnemyAI : MonoBehaviour
     }
 
     // ── Core tile step ────────────────────────────────────────────────────
+<<<<<<< Updated upstream
     private IEnumerator TakeStep(Vector2 direction)
     {
         if (_isStepping) yield break;
@@ -280,16 +390,39 @@ public class EnemyAI : MonoBehaviour
 
         Vector2 start   = _rb.position;
         Vector2 target  = SnapPosition(start + direction * tileSize);
+=======
+    private IEnumerator TakeStep(Vector2 dir)
+    {
+        if (_isStepping) yield break;
+        dir = CardinalDir(dir);
+        if (WouldHitObstacle(dir)) yield break;
+
+        _isStepping        = true;
+        _stepCooldownTimer = stepCooldown;
+        FacingDirection    = dir;
+        FlipSprite(dir);
+
+        Vector2 start   = _rb.position;
+        Vector2 end     = SnapPos(start + dir * tileSize);
+>>>>>>> Stashed changes
         float   elapsed = 0f;
 
         while (elapsed < stepDuration)
         {
             elapsed += Time.fixedDeltaTime;
+<<<<<<< Updated upstream
             _rb.MovePosition(Vector2.Lerp(start, target, Mathf.Clamp01(elapsed / stepDuration)));
             yield return new WaitForFixedUpdate();
         }
 
         _rb.MovePosition(target);
+=======
+            _rb.MovePosition(Vector2.Lerp(start, end, Mathf.Clamp01(elapsed / stepDuration)));
+            yield return new WaitForFixedUpdate();
+        }
+
+        _rb.MovePosition(end);
+>>>>>>> Stashed changes
         _isStepping = false;
     }
 
@@ -308,17 +441,24 @@ public class EnemyAI : MonoBehaviour
         _rb.velocity = Vector2.zero;
     }
 
+    // Called by PossessionSystem.MovePossessedEnemy — one tile per key press
+    public void StepInDirection(Vector2 input)
+    {
+        if (_isStepping) return;
+        StartCoroutine(TakeStep(CardinalDir(input)));
+    }
+
     public EnemyController.EnemyState GetResumeState()
     {
         if (_player == null) return EnemyController.EnemyState.Idle;
-        float dist = Vector2.Distance(transform.position, _player.position);
-        return dist <= _stats.detectionRange
+        return Vector2.Distance(transform.position, _player.position) <= _stats.detectionRange
             ? EnemyController.EnemyState.Chasing
             : EnemyController.EnemyState.Roaming;
     }
 
     public void SetObstacleLayer(LayerMask layer) => obstacleLayer = layer; // Weihan
 
+<<<<<<< Updated upstream
     // Called by PossessionSystem while player controls this enemy
     public void StepInDirection(Vector2 input)
     {
@@ -339,12 +479,27 @@ public class EnemyAI : MonoBehaviour
                             : new Vector2(Mathf.Sign(delta.x), 0);
         if (!WouldHitObstacle(primary))   return primary;
         if (!WouldHitObstacle(secondary)) return secondary;
+=======
+    // ── Pathfinding helpers ───────────────────────────────────────────────
+    private Vector2 BestStepToward(Vector3 target)
+    {
+        Vector2 delta = (Vector2)target - (Vector2)transform.position;
+        Vector2 pri   = Mathf.Abs(delta.x) >= Mathf.Abs(delta.y)
+                        ? new Vector2(Mathf.Sign(delta.x), 0)
+                        : new Vector2(0, Mathf.Sign(delta.y));
+        Vector2 sec   = Mathf.Abs(delta.x) >= Mathf.Abs(delta.y)
+                        ? new Vector2(0, Mathf.Sign(delta.y))
+                        : new Vector2(Mathf.Sign(delta.x), 0);
+        if (!WouldHitObstacle(pri)) return pri;
+        if (!WouldHitObstacle(sec)) return sec;
+>>>>>>> Stashed changes
         return Vector2.zero;
     }
 
     private bool WouldHitObstacle(Vector2 dir)
     {
         if (obstacleLayer == 0) return false;
+<<<<<<< Updated upstream
         Vector2 next = SnapPosition((Vector2)transform.position + dir * tileSize);
         return Physics2D.OverlapCircle(next, tileSize * 0.3f, obstacleLayer);
     }
@@ -366,6 +521,29 @@ public class EnemyAI : MonoBehaviour
         return Mathf.Abs(dir.x) >= Mathf.Abs(dir.y)
             ? new Vector2(Mathf.Sign(dir.x), 0f)
             : new Vector2(0f, Mathf.Sign(dir.y));
+=======
+        return Physics2D.OverlapCircle(SnapPos((Vector2)transform.position + dir * tileSize),
+                                       tileSize * 0.3f, obstacleLayer);
+    }
+
+    private float TilesFrom(Vector3 target) =>
+        Vector2.Distance(SnapPos(transform.position), SnapPos(target)) / tileSize;
+
+    // ── Grid utilities ────────────────────────────────────────────────────
+    private Vector2 SnapPos(Vector3 p) => SnapPos((Vector2)p);
+    private Vector2 SnapPos(Vector2 p) =>
+        new Vector2(Mathf.Round(p.x / tileSize) * tileSize,
+                    Mathf.Round(p.y / tileSize) * tileSize);
+
+    private void SnapToGrid() => _rb.position = SnapPos(transform.position);
+
+    private Vector2 CardinalDir(Vector2 d)
+    {
+        if (d == Vector2.zero) return Vector2.down;
+        return Mathf.Abs(d.x) >= Mathf.Abs(d.y)
+            ? new Vector2(Mathf.Sign(d.x), 0f)
+            : new Vector2(0f, Mathf.Sign(d.y));
+>>>>>>> Stashed changes
     }
 
     private void FlipSprite(Vector2 dir)

@@ -14,7 +14,11 @@ public class EnemyController : MonoBehaviour
     public GameObject attackTilePrefab;
     public float      tileSize = 0.5f;
 
+<<<<<<< Updated upstream
     [Header("Arrow")]
+=======
+    [Header("Arrow (Archer only)")]
+>>>>>>> Stashed changes
     [Tooltip("Drag your Arrow prefab here on the Archer prefab.")]
     public GameObject arrowPrefab;
 
@@ -30,7 +34,11 @@ public class EnemyController : MonoBehaviour
 
     private EnemyAI       _ai;
     private EnemyAnimator _anim;
+<<<<<<< Updated upstream
     private float         _attackCooldownTimer;
+=======
+    private float         _atkCooldown;
+>>>>>>> Stashed changes
     private float         _possessionTimer;
     private GameObject    _possessedIndicator;
     private Collider2D    _col;
@@ -49,17 +57,17 @@ public class EnemyController : MonoBehaviour
     public void Init(EnemyStats overrideStats = null)
     {
         if (overrideStats != null) stats = overrideStats;
-        CurrentHP            = stats.maxHealth;
-        _attackCooldownTimer = 0f;
-        _possessionTimer     = 0f;
-        AttackTileActive     = false;
+        CurrentHP        = stats.maxHealth;
+        _atkCooldown     = 0f;
+        _possessionTimer = 0f;
+        AttackTileActive = false;
         SetState(EnemyState.Idle);
     }
 
     private void Update()
     {
         if (CurrentState == EnemyState.Dead) return;
-        _attackCooldownTimer -= Time.deltaTime;
+        _atkCooldown -= Time.deltaTime;
 
         if (CurrentState == EnemyState.Possessed)
         {
@@ -69,17 +77,17 @@ public class EnemyController : MonoBehaviour
         }
     }
 
-    public void SetState(EnemyState newState)
+    public void SetState(EnemyState next)
     {
-        if (CurrentState == newState) return;
+        if (CurrentState == next) return;
         ExitState(CurrentState);
-        CurrentState = newState;
-        EnterState(newState);
+        CurrentState = next;
+        EnterState(next);
     }
 
-    private void EnterState(EnemyState state)
+    private void EnterState(EnemyState s)
     {
-        switch (state)
+        switch (s)
         {
             case EnemyState.Idle:
                 _ai.StopMovement();
@@ -115,9 +123,9 @@ public class EnemyController : MonoBehaviour
         }
     }
 
-    private void ExitState(EnemyState state)
+    private void ExitState(EnemyState s)
     {
-        if (state == EnemyState.Possessed)
+        if (s == EnemyState.Possessed)
         {
             if (_possessedIndicator) Destroy(_possessedIndicator);
             OnPossessionEnd?.Invoke(this);
@@ -126,7 +134,7 @@ public class EnemyController : MonoBehaviour
 
     public void TriggerAttack()
     {
-        if (_attackCooldownTimer > 0f || CurrentState == EnemyState.Attacking) return;
+        if (_atkCooldown > 0f || CurrentState == EnemyState.Attacking) return;
         SetState(EnemyState.Attacking);
     }
 
@@ -138,8 +146,7 @@ public class EnemyController : MonoBehaviour
 
     private IEnumerator PerformAttack()
     {
-        _attackCooldownTimer = stats.attackCooldown;
-
+        _atkCooldown = stats.attackCooldown;
         switch (stats.enemyType)
         {
             case EnemyStats.EnemyType.Warrior:
@@ -156,16 +163,20 @@ public class EnemyController : MonoBehaviour
                 yield return StartCoroutine(MageAttack());
                 break;
         }
-
         SetState(_ai.GetResumeState());
     }
 
+<<<<<<< Updated upstream
     // ── Sword: 3-tile wide arc ────────────────────────────────────────────
+=======
+    // ── Sword: 3 tiles in a T-shape — centre-front, left-front, right-front ──
+>>>>>>> Stashed changes
     private IEnumerator SwordAttack()
     {
         _anim?.PlayAttack();
 
         Vector2 fwd  = _ai.FacingDirection;
+<<<<<<< Updated upstream
         Vector2 perp = new Vector2(-fwd.y, fwd.x);
 
         Vector3 centerTile = transform.position + (Vector3)(fwd  * tileSize);
@@ -175,11 +186,26 @@ public class EnemyController : MonoBehaviour
         var tc = SpawnAttackTile(centerTile, tileSize);
         var tl = SpawnAttackTile(leftTile,   tileSize);
         var tr = SpawnAttackTile(rightTile,  tileSize);
+=======
+        Vector2 perp = new Vector2(-fwd.y, fwd.x); // 90° rotation
+
+        Vector3 centre = transform.position + (Vector3)(fwd  * tileSize);
+        Vector3 left   = centre             + (Vector3)(perp * tileSize);
+        Vector3 right  = centre             - (Vector3)(perp * tileSize);
+
+        var tc = SpawnTile(centre, tileSize);
+        var tl = SpawnTile(left,   tileSize);
+        var tr = SpawnTile(right,  tileSize);
+>>>>>>> Stashed changes
         AttackTileActive = true;
 
         yield return new WaitForSeconds(0.4f);
 
+<<<<<<< Updated upstream
         foreach (var pos in new[] { centerTile, leftTile, rightTile })
+=======
+        foreach (var pos in new[] { centre, left, right })
+>>>>>>> Stashed changes
         {
             var hits = Physics2D.OverlapBoxAll(pos, Vector2.one * tileSize * 0.85f, 0f);
             foreach (var h in hits)
@@ -194,6 +220,7 @@ public class EnemyController : MonoBehaviour
         _anim?.PlayIdle();
     }
 
+<<<<<<< Updated upstream
     // ── Archer: fires arrow prefab along facing axis ──────────────────────
     private IEnumerator ArcherAttack()
     {
@@ -209,10 +236,23 @@ public class EnemyController : MonoBehaviour
             if (proj == null)
                 proj = arrowGO.AddComponent<ArrowProjectile>();
 
+=======
+    // ── Archer: instantiates Arrow prefab along the facing cardinal axis ──
+    private IEnumerator ArcherAttack()
+    {
+        _anim?.PlayAttack();
+        yield return new WaitForSeconds(0.35f); // draw telegraph
+
+        if (arrowPrefab != null)
+        {
+            var go   = Instantiate(arrowPrefab, transform.position, Quaternion.identity);
+            var proj = go.GetComponent<ArrowProjectile>() ?? go.AddComponent<ArrowProjectile>();
+>>>>>>> Stashed changes
             proj.Init(_ai.FacingDirection, stats.arrowSpeed, stats.attackDamage, gameObject);
         }
         else
         {
+<<<<<<< Updated upstream
             // Fallback: plain white arrow if no prefab assigned (editor warning)
             Debug.LogWarning($"{gameObject.name}: arrowPrefab not assigned on EnemyController. " +
                              "Drag your Arrow prefab into the 'Arrow Prefab' field on the Archer prefab.");
@@ -221,6 +261,14 @@ public class EnemyController : MonoBehaviour
             var sr = arrowGO.AddComponent<SpriteRenderer>();
             sr.color = Color.white;
             var proj = arrowGO.AddComponent<ArrowProjectile>();
+=======
+            Debug.LogWarning($"[{gameObject.name}] arrowPrefab not assigned on EnemyController. " +
+                             "Drag your Arrow prefab into the 'Arrow Prefab' slot.");
+            // Fallback: invisible arrow still deals damage
+            var go   = new GameObject("Arrow_fallback");
+            go.transform.position = transform.position;
+            var proj = go.AddComponent<ArrowProjectile>();
+>>>>>>> Stashed changes
             proj.Init(_ai.FacingDirection, stats.arrowSpeed, stats.attackDamage, gameObject);
         }
 
@@ -232,19 +280,29 @@ public class EnemyController : MonoBehaviour
     private IEnumerator TankAttack()
     {
         _anim?.PlayAttack();
+<<<<<<< Updated upstream
         Vector2 bashDir  = _ai.FacingDirection;
         float   elapsed  = 0f;
         float   bashTime = 0.3f;
         float   speed    = (stats.bashDistance * tileSize) / bashTime;
 
         var bashTile     = SpawnAttackTile(transform.position + (Vector3)(bashDir * tileSize), tileSize);
+=======
+        Vector2 dir      = _ai.FacingDirection;
+        float   elapsed  = 0f;
+        float   bashTime = 0.3f;
+        float   spd      = (stats.bashDistance * tileSize) / bashTime;
+
+        var tile = SpawnTile(transform.position + (Vector3)(dir * tileSize), tileSize);
+>>>>>>> Stashed changes
         AttackTileActive = true;
 
         var rb = GetComponent<Rigidbody2D>();
         while (elapsed < bashTime)
         {
-            rb.MovePosition(rb.position + bashDir * speed * Time.fixedDeltaTime);
+            rb.MovePosition(rb.position + dir * spd * Time.fixedDeltaTime);
             elapsed += Time.deltaTime;
+<<<<<<< Updated upstream
             var hit = Physics2D.OverlapCircle(transform.position, tileSize * 0.4f,
                           LayerMask.GetMask("Player"));
             hit?.GetComponent<PlayerController>()?.TakeDamage(stats.bashDamage); // Gagan
@@ -252,6 +310,14 @@ public class EnemyController : MonoBehaviour
         }
 
         if (bashTile) Destroy(bashTile);
+=======
+            var h = Physics2D.OverlapCircle(transform.position, tileSize * 0.4f, LayerMask.GetMask("Player"));
+            h?.GetComponent<PlayerController>()?.TakeDamage(stats.bashDamage); // Gagan
+            yield return null;
+        }
+
+        if (tile) Destroy(tile);
+>>>>>>> Stashed changes
         AttackTileActive = false;
         _anim?.PlayIdle();
     }
@@ -263,6 +329,7 @@ public class EnemyController : MonoBehaviour
         var player = GameObject.FindWithTag("Player");
         if (player == null) yield break;
 
+<<<<<<< Updated upstream
         Vector3 targetPos = SnapToTile(player.transform.position);
         var meteorTile    = SpawnAttackTile(targetPos, stats.meteorRadius * tileSize);
         AttackTileActive  = true;
@@ -273,6 +340,18 @@ public class EnemyController : MonoBehaviour
             h.GetComponent<PlayerController>()?.TakeDamage(stats.attackDamage); // Gagan
 
         if (meteorTile) Destroy(meteorTile);
+=======
+        Vector3 target = SnapToTile(player.transform.position);
+        var tile = SpawnTile(target, stats.meteorRadius * tileSize);
+        AttackTileActive = true;
+        yield return new WaitForSeconds(stats.meteorDelay);
+
+        var hits = Physics2D.OverlapCircleAll(target, stats.meteorRadius * tileSize);
+        foreach (var h in hits)
+            h.GetComponent<PlayerController>()?.TakeDamage(stats.attackDamage); // Gagan
+
+        if (tile) Destroy(tile);
+>>>>>>> Stashed changes
         AttackTileActive = false;
         _anim?.PlayIdle();
     }
@@ -302,12 +381,9 @@ public class EnemyController : MonoBehaviour
         StartCoroutine(DelayedDestroy(0.8f));
     }
 
-    private IEnumerator DelayedDestroy(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        Destroy(gameObject);
-    }
+    private IEnumerator DelayedDestroy(float d) { yield return new WaitForSeconds(d); Destroy(gameObject); }
 
+<<<<<<< Updated upstream
     private Vector3 SnapToTile(Vector3 pos) =>
         new Vector3(Mathf.Round(pos.x / tileSize) * tileSize,
                     Mathf.Round(pos.y / tileSize) * tileSize, pos.z);
@@ -318,13 +394,25 @@ public class EnemyController : MonoBehaviour
         var tile = Instantiate(attackTilePrefab, pos, Quaternion.identity);
         tile.transform.localScale = Vector3.one * size;
         return tile;
+=======
+    private Vector3 SnapToTile(Vector3 p) =>
+        new Vector3(Mathf.Round(p.x / tileSize) * tileSize,
+                    Mathf.Round(p.y / tileSize) * tileSize, p.z);
+
+    private GameObject SpawnTile(Vector3 pos, float size)
+    {
+        if (!attackTilePrefab) return null;
+        var t = Instantiate(attackTilePrefab, pos, Quaternion.identity);
+        t.transform.localScale = Vector3.one * size;
+        return t;
+>>>>>>> Stashed changes
     }
 
     public EnemyStats.EnemyType GetEnemyType() => stats.enemyType;
 
     public bool UsePossessedAbility()
     {
-        if (_attackCooldownTimer > 0f) return false;
+        if (_atkCooldown > 0f) return false;
         SetState(EnemyState.Attacking);
         return true;
     }
@@ -335,19 +423,28 @@ public class EnemyController : MonoBehaviour
     }
 }
 
+<<<<<<< Updated upstream
 // ── Arrow projectile ──────────────────────────────────────────────────────
 // Add this component to your Arrow prefab, OR it gets added automatically.
 // The prefab's own SpriteRenderer provides the visual.
+=======
+// ── Arrow projectile — attach to your Arrow prefab, or it gets added automatically ──
+>>>>>>> Stashed changes
 public class ArrowProjectile : MonoBehaviour
 {
     private Vector2    _dir;
     private float      _speed;
     private float      _damage;
     private GameObject _owner;
+<<<<<<< Updated upstream
     private bool       _initialised;
+=======
+    private bool       _ready;
+>>>>>>> Stashed changes
 
-    public void Init(Vector2 direction, float speed, float damage, GameObject owner)
+    public void Init(Vector2 dir, float speed, float damage, GameObject owner)
     {
+<<<<<<< Updated upstream
         _dir         = direction.normalized;
         _speed       = speed;
         _damage      = damage;
@@ -368,6 +465,27 @@ public class ArrowProjectile : MonoBehaviour
         else
         {
             // Make sure whatever collider is on the prefab is a trigger
+=======
+        _dir    = dir.normalized;
+        _speed  = speed;
+        _damage = damage;
+        _owner  = owner;
+        _ready  = true;
+
+        // Rotate sprite to face travel direction
+        float angle = Mathf.Atan2(_dir.y, _dir.x) * Mathf.Rad2Deg;
+        transform.rotation = Quaternion.AngleAxis(angle, Vector3.forward);
+
+        // Ensure trigger collider exists (prefab may already have one)
+        if (!GetComponent<Collider2D>())
+        {
+            var c = gameObject.AddComponent<CircleCollider2D>();
+            c.isTrigger = true;
+            c.radius    = 0.1f;
+        }
+        else
+        {
+>>>>>>> Stashed changes
             GetComponent<Collider2D>().isTrigger = true;
         }
 
@@ -376,15 +494,27 @@ public class ArrowProjectile : MonoBehaviour
 
     private void Update()
     {
+<<<<<<< Updated upstream
         if (!_initialised) return;
         transform.Translate(Vector2.right * _speed * Time.deltaTime); // local right = facing direction
+=======
+        if (!_ready) return;
+        // Move along local right (= facing direction after rotation above)
+        transform.Translate(Vector2.right * _speed * Time.deltaTime);
+>>>>>>> Stashed changes
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
+<<<<<<< Updated upstream
         if (!_initialised) return;
         if (other.gameObject == _owner) return;
         if (other.isTrigger) return; // ignore attack tiles and other triggers
+=======
+        if (!_ready) return;
+        if (other.gameObject == _owner) return;
+        if (other.isTrigger) return; // skip attack tiles and other triggers
+>>>>>>> Stashed changes
         other.GetComponent<PlayerController>()?.TakeDamage(_damage); // Gagan
         Destroy(gameObject);
     }
