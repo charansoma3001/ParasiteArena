@@ -1,7 +1,7 @@
 using UnityEngine;
 
 // SETUP: place this on its own empty GameObject (e.g. "Systems").
-// Do NOT put it on the Player — the player hides during possession.
+// Do NOT put it on the Player — the Player hides during possession.
 public class PossessionSystem : MonoBehaviour
 {
     public static PossessionSystem Instance { get; private set; }
@@ -37,14 +37,14 @@ public class PossessionSystem : MonoBehaviour
         return true;
     }
 
-    // Called by PlayerController.Update (Q key)
+    // Called by PlayerController.Update (Space while possessing)
     public bool UsePossessedAbility()
     {
         if (!IsPossessing || PossessedEnemy == null) return false;
         return PossessedEnemy.UsePossessedAbility();
     }
 
-    // Called by PlayerController.Update (R key)
+    // Called by PlayerController.Update (R while possessing)
     public void UsePossessedBlock()
     {
         if (!IsPossessing || PossessedEnemy == null) return;
@@ -59,18 +59,18 @@ public class PossessionSystem : MonoBehaviour
         IsPossessing   = false;
         PossessedEnemy = null;
         released.SetState(EnemyController.EnemyState.Chasing);
-        // Event fires BEFORE state change so PlayerController.OnPossessionEnd
+        // Fire event BEFORE the enemy state changes so PlayerController.HandlePossessionChanged
         // can read released.transform.position as the player's return point
         OnPossessionChanged?.Invoke(false, released); // Gagan - UIManager
     }
 
-    // Called by PlayerController.Update (WASD while possessing) — one tile step per key press
+    // Called by PlayerController.Update (WASD while possessing) — one tile step per key-press.
+    // NOTE: PlayerController.Update tracks transform.position every frame automatically,
+    // so we only need to trigger the step here.
     public void MovePossessedEnemy(Vector2 cardinalDir)
     {
         if (!IsPossessing || PossessedEnemy == null) return;
         PossessedEnemy.GetComponent<EnemyAI>()?.StepInDirection(cardinalDir);
-        // Keep player Transform co-located so camera follow and possession range stay correct
-        if (_player) _player.position = PossessedEnemy.transform.position;
     }
 
     // Charan - ItemSystem: relic that extends possession duration
