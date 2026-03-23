@@ -223,7 +223,7 @@ public class MapManager : MonoBehaviour
         }
 
         // Trigger collider for the interact-radius detection
-        AddInteractTrigger(chest, chestComp.interactRadius);
+        AddInteractTrigger(chest, 1.5f);
 
         // Record position for separation checks.
         _placedChestPositions.Add(worldPos);
