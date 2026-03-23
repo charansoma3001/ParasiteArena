@@ -45,6 +45,7 @@ public class PlayerController : MonoBehaviour
         _sr   = GetComponent<SpriteRenderer>() ?? GetComponentInChildren<SpriteRenderer>();
 
         CurrentHealth = maxHealth;
+        OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
     }
 
     private void Update()
