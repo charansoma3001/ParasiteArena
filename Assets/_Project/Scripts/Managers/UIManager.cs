@@ -8,12 +8,13 @@ public class UIManager : MonoBehaviour
     public TextMeshProUGUI xpText;
     public TextMeshProUGUI goldText;
     public TextMeshProUGUI healthText;
-
+    public TextMeshProUGUI timerText;
     private PlayerController _player;
 
     private void Start()
     {
         PlayerController.OnHealthChanged += UpdateHealthUI;
+        WaveManager.Instance.OnTimerChanged += UpdateTimerUI;
         _player = FindFirstObjectByType<PlayerController>();
 
         if (_player != null)
@@ -40,6 +41,7 @@ public class UIManager : MonoBehaviour
     private void OnDestroy()
     {
         PlayerController.OnHealthChanged -= UpdateHealthUI;
+         WaveManager.Instance.OnTimerChanged -= UpdateTimerUI;
 
         // CRITICAL: Always unsubscribe when this object is destroyed to prevent memory leaks!
         if (ProgressionManager.Instance != null)
@@ -70,5 +72,11 @@ public class UIManager : MonoBehaviour
     private void UpdateHealthUI(int currentHealth, int maxHealth)
     {
         healthText.text = "Health: " + currentHealth.ToString() + " / " + maxHealth.ToString();
+    }
+
+     private void UpdateTimerUI(float timeLeft)
+    {
+        // Format the raw float into clean seconds (e.g. 59, 58, 57...)
+        timerText.text = "Time: " + Mathf.CeilToInt(timeLeft).ToString();
     }
 }

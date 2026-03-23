@@ -5,6 +5,19 @@ using TMPro;
 
 public class ShopManager : MonoBehaviour
 {
+    public static ShopManager Instance { get; private set; }
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+    }
+    
+    
     [Header("Shop Inventory Data")]
     public List<UpgradeData> allPossibleUpgrades; // Drag all your ScriptableObjects here
     private UpgradeData[] currentShopUpgrades = new UpgradeData[3]; // The 3 items currently for sale
