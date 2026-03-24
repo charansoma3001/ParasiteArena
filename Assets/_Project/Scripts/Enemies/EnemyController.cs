@@ -124,7 +124,6 @@ public class EnemyController : MonoBehaviour
         }
     }
 
-    // ── AI-triggered attack (used by EnemyAI when not possessed) ─────────
     public void TriggerAttack()
     {
         if (_atkCooldown > 0f || CurrentState == EnemyState.Attacking) return;
@@ -144,10 +143,7 @@ public class EnemyController : MonoBehaviour
         SetState(_ai.GetResumeState());
     }
 
-    // ── Player-triggered ability while possessed ──────────────────────────
-    // CRITICAL: does NOT call SetState — the enemy stays in Possessed state
-    // throughout the entire attack. Calling SetState(Attacking) would exit
-    // Possessed, tear down the possession system, and break everything.
+
     public bool UsePossessedAbility()
     {
         if (_atkCooldown > 0f) return false;
@@ -159,10 +155,8 @@ public class EnemyController : MonoBehaviour
     {
         _atkCooldown = stats.attackCooldown;
         yield return StartCoroutine(RunAttackForType(stats.enemyType));
-        // Stay in Possessed — do NOT call GetResumeState or SetState
     }
 
-    // ── Shared attack logic for both AI and player control ───────────────
     private IEnumerator RunAttackForType(EnemyStats.EnemyType type)
     {
         switch (type)
@@ -183,7 +177,6 @@ public class EnemyController : MonoBehaviour
         }
     }
 
-    // ── Sword: 3-tile T-shape ─────────────────────────────────────────────
     private IEnumerator SwordAttack()
     {
         _anim?.PlayAttack();
@@ -217,13 +210,12 @@ public class EnemyController : MonoBehaviour
         _anim?.PlayIdle();
     }
 
-    // ── Archer ────────────────────────────────────────────────────────────
     private IEnumerator ArcherAttack()
     {
         _anim?.PlayAttack();
         yield return new WaitForSeconds(0.35f);
 
-        bool firedByPossessed = IsPossessed; // capture before any state change
+        bool firedByPossessed = IsPossessed;
 
         if (arrowPrefab != null)
         {
@@ -244,7 +236,6 @@ public class EnemyController : MonoBehaviour
         _anim?.PlayIdle();
     }
 
-    // ── Tank bash ─────────────────────────────────────────────────────────
     private IEnumerator TankAttack()
     {
         _anim?.PlayAttack();
@@ -271,12 +262,10 @@ public class EnemyController : MonoBehaviour
         _anim?.PlayIdle();
     }
 
-    // ── Mage meteor ───────────────────────────────────────────────────────
     private IEnumerator MageAttack()
     {
         _anim?.PlayAttack();
 
-        // Use EnemyAI's cached target so we hit the right thing (player or possessed enemy)
         Vector3 targetPos = _ai.GetCurrentTarget();
         var tile = SpawnTile(targetPos, stats.meteorRadius * tileSize);
         AttackTileActive = true;
@@ -291,29 +280,21 @@ public class EnemyController : MonoBehaviour
         _anim?.PlayIdle();
     }
 
-    // ── Damage routing ────────────────────────────────────────────────────
-    // Rules:
-    //   • Always damage the player body (PlayerController).
-    //   • Damage a possessed enemy (it can take damage from non-possessed attackers).
-    //   • When THIS enemy is possessed, damage non-possessed enemies (friendly fire).
-    //   • Never self-damage.
+
     private void HitTarget(Collider2D h, float damage)
     {
         if (h == null) return;
 
-        // Normal player body
         h.GetComponent<PlayerController>()?.TakeDamage(damage); // Gagan
 
         var ec = h.GetComponent<EnemyController>();
         if (ec == null || ec == this) return;
 
-        // Non-possessed attacker hitting the possessed body → damage it
-        // Possessed attacker hitting any non-possessed enemy → damage it
+ 
         if (ec.IsPossessed || IsPossessed)
             ec.TakeDamage(damage);
     }
 
-    // ── Health / Death ────────────────────────────────────────────────────
     public void TakeDamage(float amount)
     {
         if (IsDead) return;
@@ -331,7 +312,6 @@ public class EnemyController : MonoBehaviour
 
     private void HandleDeath()
     {
-        // If the possessed enemy dies, cleanly end possession first
         if (PossessionSystem.Instance != null &&
             PossessionSystem.Instance.IsPossessing &&
             PossessionSystem.Instance.PossessedEnemy == this)
@@ -341,7 +321,7 @@ public class EnemyController : MonoBehaviour
         _col.enabled = false;
         _anim?.PlayDeath();
         if (deathVFXPrefab) Instantiate(deathVFXPrefab, transform.position, Quaternion.identity);
-        OnEnemyDied?.Invoke(this); // Charan (XP/gold) + Gagan (HUD) + Weihan (spawn records)
+        OnEnemyDied?.Invoke(this); 
         StartCoroutine(DelayedDestroy(0.8f));
     }
 
@@ -367,7 +347,6 @@ public class EnemyController : MonoBehaviour
     }
 }
 
-// ── Arrow projectile ──────────────────────────────────────────────────────
 public class ArrowProjectile : MonoBehaviour
 {
     private Vector2    _dir;
@@ -375,9 +354,8 @@ public class ArrowProjectile : MonoBehaviour
     private float      _damage;
     private GameObject _owner;
     private bool       _ready;
-    private bool       _firedByPossessed; // true → can hurt other enemies
+    private bool       _firedByPossessed; 
 
-    // Old signature kept for any existing callers
     public void Init(Vector2 dir, float speed, float damage, GameObject owner)
         => Init(dir, speed, damage, owner, false);
 
@@ -419,12 +397,10 @@ public class ArrowProjectile : MonoBehaviour
 
         bool hit = false;
 
-        // Always try to damage the player body
         var pc = other.GetComponent<PlayerController>();
-        if (pc != null) { pc.TakeDamage(_damage); hit = true; } // Gagan
+        if (pc != null) { pc.TakeDamage(_damage); hit = true; } 
 
-        // Damage the possessed enemy (hit by non-possessed archer)
-        // OR damage any non-possessed enemy (hit by possessed archer)
+      
         var ec = other.GetComponent<EnemyController>();
         if (ec != null && ec.gameObject != _owner)
         {

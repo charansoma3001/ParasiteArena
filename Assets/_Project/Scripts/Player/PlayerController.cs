@@ -25,8 +25,8 @@ public class PlayerController : MonoBehaviour
     public bool IsPossessing  => PossessionSystem.Instance != null &&
                                  PossessionSystem.Instance.IsPossessing;
 
-    public static event System.Action<int, int> OnHealthChanged; // Gagan - UIManager
-    public static event System.Action           OnPlayerDied;    // Gagan - UIManager + Charan - ScoreManager
+    public static event System.Action<int, int> OnHealthChanged; 
+    public static event System.Action           OnPlayerDied;    
 
     private Rigidbody2D    _rb;
     private Animator       _anim;
@@ -52,9 +52,6 @@ public class PlayerController : MonoBehaviour
         _sr   = GetComponent<SpriteRenderer>() ?? GetComponentInChildren<SpriteRenderer>();
         _col  = GetComponent<Collider2D>();
 
-        // PlayerMovement.FixedUpdate runs rb.velocity = movement * speed every frame,
-        // which overwrites the dash velocity and makes Space do nothing.
-        // Disable it here so PlayerController owns all movement.
         var pm = GetComponent<PlayerMovement>();
         if (pm != null)
         {
@@ -75,16 +72,12 @@ public class PlayerController : MonoBehaviour
     {
         if (IsDead) return;
 
-        // ── While possessing ─────────────────────────────────────────────
         if (IsPossessing)
         {
-            // Track the possessed body EVERY FRAME so the player indicator
-            // and camera follow smoothly, not just on key presses.
             var possessed = PossessionSystem.Instance.PossessedEnemy;
             if (possessed != null)
                 transform.position = possessed.transform.position;
 
-            // WASD / arrows → one tile step per key-down
             if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
                 PossessionSystem.Instance.MovePossessedEnemy(Vector2.up);
             else if (Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow))
@@ -94,22 +87,18 @@ public class PlayerController : MonoBehaviour
             else if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
                 PossessionSystem.Instance.MovePossessedEnemy(Vector2.right);
 
-            // Space → fire the possessed enemy's ability
             if (Input.GetKeyDown(KeyCode.Space))
                 PossessionSystem.Instance.UsePossessedAbility();
 
-            // R → block (Swordsman only)
             if (Input.GetKeyDown(KeyCode.R))
                 PossessionSystem.Instance.UsePossessedBlock();
 
-            // E or Escape → release
             if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Escape))
                 PossessionSystem.Instance.EndPossession();
 
             return;
         }
 
-        // ── Normal movement ──────────────────────────────────────────────
         if (IsDashing) return;
 
         _dashCooldown -= Time.deltaTime;
@@ -127,24 +116,21 @@ public class PlayerController : MonoBehaviour
             _facingDir = _movement.x > 0 ? -1 : 1;
         transform.localScale = new Vector2(_facingDir, 1);
 
-        // Space → dash (uses last direction so it works even while standing still)
         if (Input.GetKeyDown(KeyCode.Space) && _dashCooldown <= 0f)
             StartCoroutine(DashCoroutine(_lastMoveDir));
 
-        // E → possess adjacent enemy
         if (Input.GetKeyDown(KeyCode.E))
             TryPossessAdjacent();
 
-        if (Input.GetKeyDown(KeyCode.H)) Heal(20); // test key
+        if (Input.GetKeyDown(KeyCode.H)) Heal(20); 
     }
 
     private void FixedUpdate()
     {
         if (IsDead || IsPossessing || IsDashing) return;
-        _rb.velocity = _movement * speed; // Charan - StatManager may call SetSpeed()
+        _rb.velocity = _movement * speed; // Chara
     }
 
-    // ── Dash ──────────────────────────────────────────────────────────────
     private IEnumerator DashCoroutine(Vector2 dir)
     {
         IsDashing     = true;
@@ -161,11 +147,10 @@ public class PlayerController : MonoBehaviour
 
         _rb.velocity = Vector2.zero;
         IsDashing    = false;
-        yield return null;        // one extra frame of iframes
+        yield return null;
         IsInvincible = false;
     }
 
-    // ── Possession ────────────────────────────────────────────────────────
     private void TryPossessAdjacent()
     {
         if (PossessionSystem.Instance == null)
@@ -201,14 +186,13 @@ public class PlayerController : MonoBehaviour
                       $"Colliders on Enemy layer: {cols.Length}");
     }
 
-    // ── Damage & Death ────────────────────────────────────────────────────
-    public void TakeDamage(float amount) // Terry - EnemyController
+    public void TakeDamage(float amount) // Terry
     {
         if (!CompareTag("Player")) return;
         if (IsDead || IsInvincible)   return;
-        if (IsPossessing)             return; // body is hidden and immune
+        if (IsPossessing)             return;
         CurrentHealth = Mathf.Max(0, CurrentHealth - Mathf.RoundToInt(amount));
-        OnHealthChanged?.Invoke(CurrentHealth, maxHealth); // Gagan - UIManager
+        OnHealthChanged?.Invoke(CurrentHealth, maxHealth); // Gagan
         if (CurrentHealth <= 0) Die();
     }
 
@@ -218,15 +202,13 @@ public class PlayerController : MonoBehaviour
         IsDead       = true;
         _rb.velocity = Vector2.zero;
         SetAnimFloat("Speed", 0);
-        OnPlayerDied?.Invoke(); // Gagan - UIManager + Charan - ScoreManager
+        OnPlayerDied?.Invoke(); // Gagan
     }
 
-    // ── Possession hooks (called by PossessionSystem) ─────────────────────
-    public void OnPossessionStart(EnemyController possessed) // Terry - PossessionSystem
+    public void OnPossessionStart(EnemyController possessed)
     {
         if (_sr)  _sr.enabled  = false;
-        // Disable collider so enemies don't detect the hidden player body
-        // and get stuck attacking empty space instead of the possessed enemy.
+
         if (_col) _col.enabled = false;
         _rb.velocity = Vector2.zero;
         SetAnimFloat("Speed", 0);
@@ -248,17 +230,16 @@ public class PlayerController : MonoBehaviour
         if (!started) OnPossessionEnd(enemy.transform.position);
     }
 
-    // ── Stat setters ──────────────────────────────────────────────────────
-    public void SetMaxHealth(int value) // Charan - StatManager
+    public void SetMaxHealth(int value) // Charan 
     {
         maxHealth     = value;
         CurrentHealth = Mathf.Min(CurrentHealth, maxHealth);
         OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
     }
 
-    public void SetSpeed(float value) => speed = value; // Charan - StatManager
+    public void SetSpeed(float value) => speed = value; // Charan 
 
-    public void Heal(int amount) // Charan - ItemSystem / ChestSystem
+    public void Heal(int amount) // Charan
     {
         if (IsDead) return;
         CurrentHealth = Mathf.Min(maxHealth, CurrentHealth + amount);

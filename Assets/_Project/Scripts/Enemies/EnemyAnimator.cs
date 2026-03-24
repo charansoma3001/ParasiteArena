@@ -1,11 +1,5 @@
 using UnityEngine;
 
-// Sits on the same child GameObject as the Animator.
-// Calls Play() directly — no Animator transitions needed.
-//
-// Inspector state name map:
-//   Swordsman: Idle=IdleNormal  Walk=Walk!  Attack=Attack1  Hit=Hit  Block=Block!
-//   Archer:    Idle=IdleNormal  Walk=Walk   Attack=Atk!     Hit=hit
 public class EnemyAnimator : MonoBehaviour
 {
     [Header("State Names — must match exactly what is in your Animator Controller")]
@@ -38,7 +32,6 @@ public class EnemyAnimator : MonoBehaviour
     public void PlayDeath()  => Play(deathState);
     public void PlayBlock()  => Play(blockState);
 
-    // Called every frame by EnemyAI — switches Idle/Walk based on movement
     public void TickMovement(bool isMoving)
     {
         if (_current == attackState || _current == hitState ||

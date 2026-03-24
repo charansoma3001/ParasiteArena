@@ -18,8 +18,8 @@ public class EnemyStats : ScriptableObject
     public float attackCooldown = 1.5f;
     public float detectionRange = 8f;
     public float roamRange      = 5f;
-    public int   xpReward       = 10;   // Charan - XPSystem
-    public int   goldReward     = 5;    // Charan - ScoreManager
+    public int   xpReward       = 10;   
+    public int   goldReward     = 5;    
 
     [Header("Possession")]
     public float possessionDuration           = 8f;

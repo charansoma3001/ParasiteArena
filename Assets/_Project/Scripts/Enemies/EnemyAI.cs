@@ -15,7 +15,7 @@ public class EnemyAI : MonoBehaviour
     public int archerKiteDistance = 3;
 
     [Header("Pathfinding")]
-    public LayerMask obstacleLayer; // Weihan - ObstacleSystem
+    public LayerMask obstacleLayer;
 
     private EnemyController _ctrl;
     private Rigidbody2D     _rb;
@@ -44,7 +44,7 @@ public class EnemyAI : MonoBehaviour
         _rb.gravityScale   = 0f;
         _stats = _ctrl.stats;
         _anim  = GetComponentInChildren<EnemyAnimator>();
-        var p = GameObject.FindWithTag("Player"); // Gagan
+        var p = GameObject.FindWithTag("Player");
         if (p) _player = p.transform;
     }
 
@@ -82,16 +82,11 @@ public class EnemyAI : MonoBehaviour
         UpdateHunter();
     }
 
-    // PlayerController.Update() sets transform.position = possessed.transform.position
-    // every frame, so _player.position always equals the effective target — whether
-    // that's the real player or the currently-possessed enemy.
     private Vector3 GetTargetPosition() =>
         _player != null ? _player.position : transform.position;
 
-    // Public so EnemyController.MageAttack can target the correct position
     public Vector3 GetCurrentTarget() => GetTargetPosition();
 
-    // ── Melee hunter (Swordsman / Warrior) ────────────────────────────────
     private void UpdateHunter()
     {
         Vector3 target = GetTargetPosition();
@@ -120,7 +115,6 @@ public class EnemyAI : MonoBehaviour
         if (step != Vector2.zero) StartCoroutine(TakeStep(step));
     }
 
-    // ── Archer ────────────────────────────────────────────────────────────
     private void UpdateArcher()
     {
         Vector3 target = GetTargetPosition();
@@ -159,10 +153,6 @@ public class EnemyAI : MonoBehaviour
         if (strafe != Vector2.zero) StartCoroutine(TakeStep(strafe));
     }
 
-    // Snaps both positions to the tile grid before comparing so a player
-    // at world X=5.3 and an archer at X=5.0 are correctly seen as column-aligned
-    // (both snap to X=5.0 or 5.5). Without snapping the float delta oscillates
-    // left-right and the archer never moves vertically.
     private bool IsCardinalAligned(Vector3 target)
     {
         Vector2 mine = SnapPos(transform.position);
@@ -197,7 +187,6 @@ public class EnemyAI : MonoBehaviour
         return Vector2.zero;
     }
 
-    // ── Roaming ───────────────────────────────────────────────────────────
     public void BeginRoam()
     {
         StopAllCoroutines();
@@ -215,7 +204,6 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-    // ── Chomp ─────────────────────────────────────────────────────────────
     private void UpdateChomp()
     {
         if (_isStepping || _stepCooldownTimer > 0f) return;
@@ -228,10 +216,9 @@ public class EnemyAI : MonoBehaviour
         }
         StartCoroutine(TakeStep(_chompDir));
         if (_player != null && Vector2.Distance(transform.position, _player.position) < tileSize * 0.8f)
-            _player.GetComponent<PlayerController>()?.TakeDamage(_stats.attackDamage); // Gagan
+            _player.GetComponent<PlayerController>()?.TakeDamage(_stats.attackDamage);
     }
 
-    // ── Spawner ───────────────────────────────────────────────────────────
     private void UpdateSpawner()
     {
         if (_stats.spawnPrefab == null || _activeSpawnCount >= _stats.maxSpawnCount) return;
@@ -243,7 +230,7 @@ public class EnemyAI : MonoBehaviour
         var go   = Instantiate(_stats.spawnPrefab,
                                SnapPos(transform.position + (Vector3)offset), Quaternion.identity);
         var ctrl = go.GetComponent<EnemyController>();
-        ctrl?.Init(); // Weihan - SpawnManager also calls this
+        ctrl?.Init(); // Weihan
         _activeSpawnCount++;
         EnemyController.OnEnemyDied += OnChildDied;
         void OnChildDied(EnemyController dead)
@@ -254,7 +241,6 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-    // ── Core tile step ────────────────────────────────────────────────────
     private IEnumerator TakeStep(Vector2 dir)
     {
         if (_isStepping) yield break;
@@ -281,7 +267,6 @@ public class EnemyAI : MonoBehaviour
         _isStepping = false;
     }
 
-    // ── Public API ────────────────────────────────────────────────────────
     public void BeginChase()
     {
         StopAllCoroutines();
@@ -296,14 +281,12 @@ public class EnemyAI : MonoBehaviour
         _rb.velocity = Vector2.zero;
     }
 
-    // Called by PossessionSystem.MovePossessedEnemy — one tile per key-press
     public void StepInDirection(Vector2 input)
     {
         if (_isStepping) return;
         StartCoroutine(TakeStep(CardinalDir(input)));
     }
 
-    // Lets possessed enemy set facing direction explicitly (e.g. on possession start)
     public void SetFacingDirection(Vector2 dir)
     {
         if (dir != Vector2.zero) FacingDirection = CardinalDir(dir);
@@ -317,9 +300,8 @@ public class EnemyAI : MonoBehaviour
             : EnemyController.EnemyState.Roaming;
     }
 
-    public void SetObstacleLayer(LayerMask layer) => obstacleLayer = layer; // Weihan
+    public void SetObstacleLayer(LayerMask layer) => obstacleLayer = layer;
 
-    // ── Pathfinding helpers ───────────────────────────────────────────────
     private Vector2 BestStepToward(Vector3 target)
     {
         Vector2 delta = (Vector2)target - (Vector2)transform.position;
@@ -344,7 +326,6 @@ public class EnemyAI : MonoBehaviour
     private float TilesFrom(Vector3 target) =>
         Vector2.Distance(SnapPos(transform.position), SnapPos(target)) / tileSize;
 
-    // ── Grid utilities ────────────────────────────────────────────────────
     private Vector2 SnapPos(Vector3 p) => SnapPos((Vector2)p);
     private Vector2 SnapPos(Vector2 p) =>
         new Vector2(Mathf.Round(p.x / tileSize) * tileSize,
