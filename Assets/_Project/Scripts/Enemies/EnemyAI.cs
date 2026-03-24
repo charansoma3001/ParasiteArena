@@ -82,11 +82,14 @@ public class EnemyAI : MonoBehaviour
         UpdateHunter();
     }
 
-    // During possession, PlayerController.Update moves player.transform to the
-    // possessed enemy's position every frame. So _player.position is always
-    // the correct chase target — no extra logic needed here.
+    // PlayerController.Update() sets transform.position = possessed.transform.position
+    // every frame, so _player.position always equals the effective target — whether
+    // that's the real player or the currently-possessed enemy.
     private Vector3 GetTargetPosition() =>
         _player != null ? _player.position : transform.position;
+
+    // Public so EnemyController.MageAttack can target the correct position
+    public Vector3 GetCurrentTarget() => GetTargetPosition();
 
     // ── Melee hunter (Swordsman / Warrior) ────────────────────────────────
     private void UpdateHunter()
@@ -118,8 +121,6 @@ public class EnemyAI : MonoBehaviour
     }
 
     // ── Archer ────────────────────────────────────────────────────────────
-    // Kites to stay ~archerKiteDistance tiles away.
-    // Strafes onto the player's row or column, then shoots.
     private void UpdateArcher()
     {
         Vector3 target = GetTargetPosition();
@@ -148,60 +149,43 @@ public class EnemyAI : MonoBehaviour
 
         if (_isStepping || _stepCooldownTimer > 0f) return;
 
-        // Back away if player is within kite distance
         if (tilesDist < archerKiteDistance)
         {
             Vector2 away = CardinalDir(transform.position - target);
             if (!WouldHitObstacle(away)) { StartCoroutine(TakeStep(away)); return; }
         }
 
-        // Strafe onto the same row or column as the target
         Vector2 strafe = StrafeToAlign(target);
         if (strafe != Vector2.zero) StartCoroutine(TakeStep(strafe));
     }
 
-    // Checks if the archer is on the same grid row or column as the target.
-    // IMPORTANT: snaps BOTH positions to the tile grid before comparing.
-    // Without snapping, a player at world X=5.3 vs archer at X=5.0 gives dx=0.3
-    // which exceeds the tolerance, so the archer moves sideways → overshoots to
-    // X=5.5 → dx=-0.2 → moves back → oscillates left-right forever, never up/down.
-    // Snapping to the grid makes alignment an exact integer comparison.
+    // Snaps both positions to the tile grid before comparing so a player
+    // at world X=5.3 and an archer at X=5.0 are correctly seen as column-aligned
+    // (both snap to X=5.0 or 5.5). Without snapping the float delta oscillates
+    // left-right and the archer never moves vertically.
     private bool IsCardinalAligned(Vector3 target)
     {
-        Vector2 myGrid     = SnapPos(transform.position);
-        Vector2 targetGrid = SnapPos(target);
-        return Mathf.Approximately(myGrid.x, targetGrid.x) ||
-               Mathf.Approximately(myGrid.y, targetGrid.y);
+        Vector2 mine = SnapPos(transform.position);
+        Vector2 tgt  = SnapPos(target);
+        return Mathf.Approximately(mine.x, tgt.x) || Mathf.Approximately(mine.y, tgt.y);
     }
 
-    // Picks a step direction that moves the archer one tile closer to
-    // being on the same row or column as the target.
-    // Uses snapped positions so the delta is always an integer number of tiles.
     private Vector2 StrafeToAlign(Vector3 target)
     {
-        Vector2 myGrid     = SnapPos(transform.position);
-        Vector2 targetGrid = SnapPos(target);
-        float   dx         = targetGrid.x - myGrid.x;
-        float   dy         = targetGrid.y - myGrid.y;
+        Vector2 mine = SnapPos(transform.position);
+        Vector2 tgt  = SnapPos(target);
+        float   dx   = tgt.x - mine.x;
+        float   dy   = tgt.y - mine.y;
 
         if (Mathf.Abs(dx) < 0.01f && Mathf.Abs(dy) < 0.01f) return Vector2.zero;
 
-        // Move on whichever axis has the smaller gap — reaches alignment faster.
-        // e.g. player is 1 tile right and 4 tiles above → close the 1-tile x gap
-        // to get column-aligned → then shoot upward.
         Vector2 h = new Vector2(Mathf.Sign(dx), 0f);
         Vector2 v = new Vector2(0f, Mathf.Sign(dy));
 
         Vector2 primary, secondary;
-        if (Mathf.Abs(dx) < 0.01f)       // already column-aligned, close row gap
-        {
-            primary = v; secondary = h;
-        }
-        else if (Mathf.Abs(dy) < 0.01f)  // already row-aligned, close column gap
-        {
-            primary = h; secondary = v;
-        }
-        else                              // general case: smaller delta first
+        if      (Mathf.Abs(dx) < 0.01f) { primary = v; secondary = h; }
+        else if (Mathf.Abs(dy) < 0.01f) { primary = h; secondary = v; }
+        else
         {
             bool colFirst = Mathf.Abs(dx) <= Mathf.Abs(dy);
             primary   = colFirst ? h : v;
@@ -317,6 +301,12 @@ public class EnemyAI : MonoBehaviour
     {
         if (_isStepping) return;
         StartCoroutine(TakeStep(CardinalDir(input)));
+    }
+
+    // Lets possessed enemy set facing direction explicitly (e.g. on possession start)
+    public void SetFacingDirection(Vector2 dir)
+    {
+        if (dir != Vector2.zero) FacingDirection = CardinalDir(dir);
     }
 
     public EnemyController.EnemyState GetResumeState()
