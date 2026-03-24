@@ -12,23 +12,26 @@ public class EnemyController : MonoBehaviour
 
     [Header("Attack Tile")]
     public GameObject attackTilePrefab;
-    public float      tileSize = 0.5f; // must match EnemyAI.tileSize
+    public float      tileSize = 0.5f;
+
+    [Header("Arrow (Archer only)")]
+    [Tooltip("Drag your Arrow prefab here on the Archer prefab.")]
+    public GameObject arrowPrefab;
 
     [Header("VFX")]
     public GameObject deathVFXPrefab;
     public GameObject possessedIndicatorPrefab;
 
-    public EnemyState CurrentState    { get; private set; } = EnemyState.Idle;
-    public float      CurrentHP       { get; private set; }
-    public bool       IsPossessed     => CurrentState == EnemyState.Possessed;
-    public bool       IsDead          => CurrentState == EnemyState.Dead;
+    public EnemyState CurrentState     { get; private set; } = EnemyState.Idle;
+    public float      CurrentHP        { get; private set; }
+    public bool       IsPossessed      => CurrentState == EnemyState.Possessed;
+    public bool       IsDead           => CurrentState == EnemyState.Dead;
     public bool       AttackTileActive { get; private set; }
 
     private EnemyAI       _ai;
     private EnemyAnimator _anim;
-    private float         _attackCooldownTimer;
+    private float         _atkCooldown;
     private float         _possessionTimer;
-    private GameObject    _activeTile;
     private GameObject    _possessedIndicator;
     private Collider2D    _col;
 
@@ -46,37 +49,37 @@ public class EnemyController : MonoBehaviour
     public void Init(EnemyStats overrideStats = null)
     {
         if (overrideStats != null) stats = overrideStats;
-        CurrentHP            = stats.maxHealth;
-        _attackCooldownTimer = 0f;
-        _possessionTimer     = 0f;
-        AttackTileActive     = false;
+        CurrentHP        = stats.maxHealth;
+        _atkCooldown     = 0f;
+        _possessionTimer = 0f;
+        AttackTileActive = false;
         SetState(EnemyState.Idle);
     }
 
     private void Update()
     {
         if (CurrentState == EnemyState.Dead) return;
-        _attackCooldownTimer -= Time.deltaTime;
+        _atkCooldown -= Time.deltaTime;
 
         if (CurrentState == EnemyState.Possessed)
         {
             _possessionTimer -= Time.deltaTime;
             if (_possessionTimer <= 0f)
-                PossessionSystem.Instance.EndPossession();
+                PossessionSystem.Instance?.EndPossession();
         }
     }
 
-    public void SetState(EnemyState newState)
+    public void SetState(EnemyState next)
     {
-        if (CurrentState == newState) return;
+        if (CurrentState == next) return;
         ExitState(CurrentState);
-        CurrentState = newState;
-        EnterState(newState);
+        CurrentState = next;
+        EnterState(next);
     }
 
-    private void EnterState(EnemyState state)
+    private void EnterState(EnemyState s)
     {
-        switch (state)
+        switch (s)
         {
             case EnemyState.Idle:
                 _ai.StopMovement();
@@ -112,9 +115,9 @@ public class EnemyController : MonoBehaviour
         }
     }
 
-    private void ExitState(EnemyState state)
+    private void ExitState(EnemyState s)
     {
-        if (state == EnemyState.Possessed)
+        if (s == EnemyState.Possessed)
         {
             if (_possessedIndicator) Destroy(_possessedIndicator);
             OnPossessionEnd?.Invoke(this);
@@ -123,7 +126,7 @@ public class EnemyController : MonoBehaviour
 
     public void TriggerAttack()
     {
-        if (_attackCooldownTimer > 0f || CurrentState == EnemyState.Attacking) return;
+        if (_atkCooldown > 0f || CurrentState == EnemyState.Attacking) return;
         SetState(EnemyState.Attacking);
     }
 
@@ -135,9 +138,28 @@ public class EnemyController : MonoBehaviour
 
     private IEnumerator PerformAttack()
     {
-        _attackCooldownTimer = stats.attackCooldown;
+        _atkCooldown = stats.attackCooldown;
+        yield return StartCoroutine(RunAttackForType(stats.enemyType));
+        SetState(_ai.GetResumeState());
+    }
 
-        switch (stats.enemyType)
+
+    public bool UsePossessedAbility()
+    {
+        if (_atkCooldown > 0f) return false;
+        StartCoroutine(PossessedAttack());
+        return true;
+    }
+
+    private IEnumerator PossessedAttack()
+    {
+        _atkCooldown = stats.attackCooldown;
+        yield return StartCoroutine(RunAttackForType(stats.enemyType));
+    }
+
+    private IEnumerator RunAttackForType(EnemyStats.EnemyType type)
+    {
+        switch (type)
         {
             case EnemyStats.EnemyType.Warrior:
             case EnemyStats.EnemyType.Swordsman:
@@ -153,73 +175,89 @@ public class EnemyController : MonoBehaviour
                 yield return StartCoroutine(MageAttack());
                 break;
         }
-
-        SetState(_ai.GetResumeState());
     }
 
-    // Attack tile appears exactly one tile in front of the enemy's facing direction
     private IEnumerator SwordAttack()
     {
         _anim?.PlayAttack();
 
-        // Use FacingDirection from EnemyAI — the direction the enemy last moved/faced
-        Vector3 tilePos  = transform.position + (Vector3)(_ai.FacingDirection * tileSize);
-        _activeTile      = SpawnAttackTile(tilePos, tileSize);
+        Vector2 fwd  = _ai.FacingDirection;
+        Vector2 perp = new Vector2(-fwd.y, fwd.x);
+
+        Vector3 centre = transform.position + (Vector3)(fwd  * tileSize);
+        Vector3 left   = centre             + (Vector3)(perp * tileSize);
+        Vector3 right  = centre             - (Vector3)(perp * tileSize);
+
+        var tc = SpawnTile(centre, tileSize);
+        var tl = SpawnTile(left,   tileSize);
+        var tr = SpawnTile(right,  tileSize);
         AttackTileActive = true;
 
-        // Wait long enough for the attack animation to play — tune to your frame count
         yield return new WaitForSeconds(0.4f);
 
-        // Damage anything on that tile
-        Collider2D[] hits = Physics2D.OverlapBoxAll(tilePos, Vector2.one * tileSize * 0.9f, 0f);
-        foreach (var h in hits)
-            h.GetComponent<PlayerController>()?.TakeDamage(stats.attackDamage); // Gagan
+        foreach (var pos in new[] { centre, left, right })
+        {
+            var hits = Physics2D.OverlapBoxAll(pos, Vector2.one * tileSize * 0.85f, 0f);
+            foreach (var h in hits)
+                HitTarget(h, stats.attackDamage);
+        }
 
         yield return new WaitForSeconds(0.2f);
-        DestroyActiveTile();
+        if (tc) Destroy(tc);
+        if (tl) Destroy(tl);
+        if (tr) Destroy(tr);
         AttackTileActive = false;
-
-        // Let the attack animation finish before returning to idle/chase
         _anim?.PlayIdle();
     }
 
     private IEnumerator ArcherAttack()
     {
         _anim?.PlayAttack();
-        yield return new WaitForSeconds(0.3f);
+        yield return new WaitForSeconds(0.35f);
 
-        GameObject arrow = new GameObject("Arrow");
-        arrow.transform.position = transform.position;
-        var proj = arrow.AddComponent<ArrowProjectile>();
-        proj.Init(_ai.FacingDirection, stats.arrowSpeed, stats.attackDamage, gameObject);
+        bool firedByPossessed = IsPossessed;
 
-        yield return new WaitForSeconds(0.2f);
+        if (arrowPrefab != null)
+        {
+            var go   = Instantiate(arrowPrefab, transform.position, Quaternion.identity);
+            var proj = go.GetComponent<ArrowProjectile>() ?? go.AddComponent<ArrowProjectile>();
+            proj.Init(_ai.FacingDirection, stats.arrowSpeed, stats.attackDamage, gameObject, firedByPossessed);
+        }
+        else
+        {
+            Debug.LogWarning($"[{gameObject.name}] arrowPrefab not assigned.");
+            var go   = new GameObject("Arrow_fallback");
+            go.transform.position = transform.position;
+            var proj = go.AddComponent<ArrowProjectile>();
+            proj.Init(_ai.FacingDirection, stats.arrowSpeed, stats.attackDamage, gameObject, firedByPossessed);
+        }
+
+        yield return new WaitForSeconds(0.15f);
         _anim?.PlayIdle();
     }
 
     private IEnumerator TankAttack()
     {
         _anim?.PlayAttack();
-        Vector2 bashDir  = _ai.FacingDirection;
+        Vector2 dir      = _ai.FacingDirection;
         float   elapsed  = 0f;
         float   bashTime = 0.3f;
-        float   speed    = (stats.bashDistance * tileSize) / bashTime;
+        float   spd      = (stats.bashDistance * tileSize) / bashTime;
 
-        _activeTile      = SpawnAttackTile(transform.position + (Vector3)(bashDir * tileSize), tileSize);
+        var tile = SpawnTile(transform.position + (Vector3)(dir * tileSize), tileSize);
         AttackTileActive = true;
 
         var rb = GetComponent<Rigidbody2D>();
         while (elapsed < bashTime)
         {
-            rb.MovePosition(rb.position + bashDir * speed * Time.fixedDeltaTime);
+            rb.MovePosition(rb.position + dir * spd * Time.fixedDeltaTime);
             elapsed += Time.deltaTime;
-            Collider2D hit = Physics2D.OverlapCircle(transform.position, tileSize * 0.4f,
-                                 LayerMask.GetMask("Player"));
-            hit?.GetComponent<PlayerController>()?.TakeDamage(stats.bashDamage); // Gagan
+            var cols = Physics2D.OverlapCircleAll(transform.position, tileSize * 0.4f);
+            foreach (var h in cols) HitTarget(h, stats.bashDamage);
             yield return null;
         }
 
-        DestroyActiveTile();
+        if (tile) Destroy(tile);
         AttackTileActive = false;
         _anim?.PlayIdle();
     }
@@ -227,21 +265,34 @@ public class EnemyController : MonoBehaviour
     private IEnumerator MageAttack()
     {
         _anim?.PlayAttack();
-        var player = GameObject.FindWithTag("Player");
-        if (player == null) yield break;
 
-        Vector3 targetPos = SnapToTile(player.transform.position);
-        _activeTile       = SpawnAttackTile(targetPos, stats.meteorRadius * tileSize);
-        AttackTileActive  = true;
+        Vector3 targetPos = _ai.GetCurrentTarget();
+        var tile = SpawnTile(targetPos, stats.meteorRadius * tileSize);
+        AttackTileActive = true;
         yield return new WaitForSeconds(stats.meteorDelay);
 
-        Collider2D[] hits = Physics2D.OverlapCircleAll(targetPos, stats.meteorRadius * tileSize);
+        var hits = Physics2D.OverlapCircleAll(targetPos, stats.meteorRadius * tileSize);
         foreach (var h in hits)
-            h.GetComponent<PlayerController>()?.TakeDamage(stats.attackDamage); // Gagan
+            HitTarget(h, stats.attackDamage);
 
-        DestroyActiveTile();
+        if (tile) Destroy(tile);
         AttackTileActive = false;
         _anim?.PlayIdle();
+    }
+
+
+    private void HitTarget(Collider2D h, float damage)
+    {
+        if (h == null) return;
+
+        h.GetComponent<PlayerController>()?.TakeDamage(damage); // Gagan
+
+        var ec = h.GetComponent<EnemyController>();
+        if (ec == null || ec == this) return;
+
+ 
+        if (ec.IsPossessed || IsPossessed)
+            ec.TakeDamage(damage);
     }
 
     public void TakeDamage(float amount)
@@ -256,53 +307,39 @@ public class EnemyController : MonoBehaviour
     private IEnumerator ResumeAfterHit()
     {
         yield return new WaitForSeconds(0.25f);
-        if (!IsDead) _anim?.PlayIdle();
+        if (!IsDead && !IsPossessed) _anim?.PlayIdle();
     }
 
     private void HandleDeath()
     {
+        if (PossessionSystem.Instance != null &&
+            PossessionSystem.Instance.IsPossessing &&
+            PossessionSystem.Instance.PossessedEnemy == this)
+            PossessionSystem.Instance.EndPossession();
+
         _ai.StopMovement();
         _col.enabled = false;
         _anim?.PlayDeath();
         if (deathVFXPrefab) Instantiate(deathVFXPrefab, transform.position, Quaternion.identity);
-        OnEnemyDied?.Invoke(this); // Charan + Gagan + Weihan
+        OnEnemyDied?.Invoke(this); 
         StartCoroutine(DelayedDestroy(0.8f));
     }
 
-    private IEnumerator DelayedDestroy(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        Destroy(gameObject);
-    }
+    private IEnumerator DelayedDestroy(float d) { yield return new WaitForSeconds(d); Destroy(gameObject); }
 
-    private Vector3 SnapToTile(Vector3 pos) =>
-        new Vector3(
-            Mathf.Round(pos.x / tileSize) * tileSize,
-            Mathf.Round(pos.y / tileSize) * tileSize,
-            pos.z);
+    private Vector3 SnapToTile(Vector3 p) =>
+        new Vector3(Mathf.Round(p.x / tileSize) * tileSize,
+                    Mathf.Round(p.y / tileSize) * tileSize, p.z);
 
-    private GameObject SpawnAttackTile(Vector3 pos, float size)
+    private GameObject SpawnTile(Vector3 pos, float size)
     {
-        if (attackTilePrefab == null) return null;
-        var tile = Instantiate(attackTilePrefab, pos, Quaternion.identity);
-        tile.transform.localScale = Vector3.one * size;
-        return tile;
-    }
-
-    private void DestroyActiveTile()
-    {
-        if (_activeTile) Destroy(_activeTile);
-        _activeTile = null;
+        if (!attackTilePrefab) return null;
+        var t = Instantiate(attackTilePrefab, pos, Quaternion.identity);
+        t.transform.localScale = Vector3.one * size;
+        return t;
     }
 
     public EnemyStats.EnemyType GetEnemyType() => stats.enemyType;
-
-    public bool UsePossessedAbility()
-    {
-        if (_attackCooldownTimer > 0f) return false;
-        SetState(EnemyState.Attacking);
-        return true;
-    }
 
     public void UsePossessedBlock()
     {
@@ -316,25 +353,64 @@ public class ArrowProjectile : MonoBehaviour
     private float      _speed;
     private float      _damage;
     private GameObject _owner;
+    private bool       _ready;
+    private bool       _firedByPossessed; 
 
-    public void Init(Vector2 direction, float speed, float damage, GameObject owner)
+    public void Init(Vector2 dir, float speed, float damage, GameObject owner)
+        => Init(dir, speed, damage, owner, false);
+
+    public void Init(Vector2 dir, float speed, float damage, GameObject owner, bool firedByPossessed)
     {
-        _dir    = direction.normalized;
-        _speed  = speed;
-        _damage = damage;
-        _owner  = owner;
-        var col       = gameObject.AddComponent<CircleCollider2D>();
-        col.isTrigger = true;
-        col.radius    = 0.12f;
-        Destroy(gameObject, 4f);
+        _dir              = dir.normalized;
+        _speed            = speed;
+        _damage           = damage;
+        _owner            = owner;
+        _ready            = true;
+        _firedByPossessed = firedByPossessed;
+
+        float angle = Mathf.Atan2(_dir.y, _dir.x) * Mathf.Rad2Deg;
+        transform.rotation = Quaternion.AngleAxis(angle, Vector3.forward);
+
+        if (!GetComponent<Collider2D>())
+        {
+            var c = gameObject.AddComponent<CircleCollider2D>();
+            c.isTrigger = true;
+            c.radius    = 0.1f;
+        }
+        else
+            GetComponent<Collider2D>().isTrigger = true;
+
+        Destroy(gameObject, 5f);
     }
 
-    private void Update() => transform.Translate(_dir * _speed * Time.deltaTime, Space.World);
+    private void Update()
+    {
+        if (!_ready) return;
+        transform.Translate(Vector2.right * _speed * Time.deltaTime);
+    }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
+        if (!_ready) return;
         if (other.gameObject == _owner) return;
-        other.GetComponent<PlayerController>()?.TakeDamage(_damage); // Gagan
-        Destroy(gameObject);
+        if (other.isTrigger) return;
+
+        bool hit = false;
+
+        var pc = other.GetComponent<PlayerController>();
+        if (pc != null) { pc.TakeDamage(_damage); hit = true; } 
+
+      
+        var ec = other.GetComponent<EnemyController>();
+        if (ec != null && ec.gameObject != _owner)
+        {
+            if (ec.IsPossessed || _firedByPossessed)
+            {
+                ec.TakeDamage(_damage);
+                hit = true;
+            }
+        }
+
+        if (hit) Destroy(gameObject);
     }
 }
