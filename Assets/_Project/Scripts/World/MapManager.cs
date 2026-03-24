@@ -43,7 +43,7 @@ public class MapManager : MonoBehaviour
     public int seed = 0;
 
     //parent transforms for editor hierarchy organisation.
-    private Transform _groundParent;
+    private Transform groundParent;
     private Transform _vegetationParent;
     private Transform _chestParent;
 
@@ -86,7 +86,7 @@ public class MapManager : MonoBehaviour
         Random.InitState(resolvedSeed);
 
         // Build parent objects for clean hierarchy.
-        _groundParent     = CreateParent("Ground");
+        groundParent     = CreateParent("Ground");
         _vegetationParent = CreateParent("Vegetation");
         _chestParent      = CreateParent("Chests");
 
@@ -116,7 +116,7 @@ public class MapManager : MonoBehaviour
 
         // Always place a grass ground tile.
         if (grassPrefab != null)
-            Instantiate(grassPrefab, basePos, Quaternion.identity, _groundParent);
+            Instantiate(grassPrefab, basePos, Quaternion.identity, groundParent);
 
         // Skip vegetation in protected cells.
         if (IsProtectedCell(x, y)) return;
@@ -223,7 +223,7 @@ public class MapManager : MonoBehaviour
         }
 
         // Trigger collider for the interact-radius detection
-        AddInteractTrigger(chest, chestComp.interactRadius);
+        AddInteractTrigger(chest, 1.5f);
 
         // Record position for separation checks.
         _placedChestPositions.Add(worldPos);
