@@ -21,7 +21,7 @@ public class ProgressionManager : MonoBehaviour
 
     private void Update() 
     {
-        if (Input.GetKeyDown(KeyCode.Space)) AddXP(45);
+        if (Input.GetKeyDown(KeyCode.P)) AddXP(45);
         if (Input.GetKeyDown(KeyCode.G)) AddGold(10);
     }
 
@@ -42,14 +42,14 @@ public class ProgressionManager : MonoBehaviour
     public void AddXP(int amount)
     {
         CurrentXP += amount;
-        
-        // Announce to the rest of the game that XP changed (Gagan's UI will listen for this)
-        OnXPAdded?.Invoke(CurrentXP, XPToNextLevel);
 
         if (CurrentXP >= XPToNextLevel)
         {
             LevelUp();
         }
+
+        // Announce to the rest of the game that XP changed (Gagan's UI will listen for this)
+        OnXPAdded?.Invoke(CurrentXP, XPToNextLevel);
     }
 
     private void LevelUp()
