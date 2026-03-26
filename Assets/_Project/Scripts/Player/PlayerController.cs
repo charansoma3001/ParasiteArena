@@ -122,8 +122,8 @@ public class PlayerController : MonoBehaviour
         if(Input.GetKeyDown(KeyCode.H)) // (temporary heal key for testing)
             Heal(20);
 
-        if(Input.GetKeyDown(KeyCode.D)) // (temporary damage key for testing)
-            TakeDamage(20);
+        // if(Input.GetKeyDown(KeyCode.D)) // (temporary damage key for testing)
+        //     TakeDamage(20);
 
         if (Input.GetKeyDown(KeyCode.E))
             TryPossessAdjacent();
