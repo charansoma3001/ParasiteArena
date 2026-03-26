@@ -66,6 +66,7 @@ public class PlayerController : MonoBehaviour
         _rb.freezeRotation = true;
         _rb.gravityScale   = 0f;
         CurrentHealth      = maxHealth;
+        _rb.position = new Vector2(50, 50);
     }
 
     private void Update()

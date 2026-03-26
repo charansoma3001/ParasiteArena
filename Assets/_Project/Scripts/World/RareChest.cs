@@ -13,7 +13,7 @@ public class RareChest : MonoBehaviour
 
     public static event System.Action<Vector2> OnChestOpened;
 
-    private SpriteRenderer renderer;
+    private new SpriteRenderer renderer;
     private BoxCollider2D solidCollider;
     private bool isOpen;
     private bool playerNearby;
