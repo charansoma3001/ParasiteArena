@@ -89,6 +89,25 @@ public class EnemyAI : MonoBehaviour
         UpdateHunter();
     }
 
+    // ---------------------------------------------------------------
+    // FIX (infinite pushback):
+    // All movement in this game uses MovePosition, but the Rigidbody2D
+    // is Dynamic, so physics collision responses still write a velocity
+    // that persists until someone zeroes it. Between steps nobody did,
+    // so a single bump could send an entity sliding forever.
+    //
+    // Solution: every FixedUpdate frame, if we are NOT currently running
+    // a step animation, force velocity to zero. This is safe because
+    // intentional movement is driven entirely by MovePosition; velocity
+    // is never the intended locomotion mechanism for enemies.
+    // ---------------------------------------------------------------
+    private void FixedUpdate()
+    {
+        if (_ctrl.IsDead) return;
+        if (!_isStepping)
+            _rb.velocity = Vector2.zero;
+    }
+
     // PlayerController.Update copies transform.position to possessed enemy every frame,
     // so _player.position always equals the effective target automatically.
     private Vector3 GetTargetPosition() =>
@@ -329,6 +348,10 @@ public class EnemyAI : MonoBehaviour
         FacingDirection    = dir;
         FlipSprite(dir);
 
+        // FIX (pushback): clear any residual physics velocity before we
+        // start the MovePosition lerp so the two don't fight each other.
+        _rb.velocity = Vector2.zero;
+
         Vector2 start   = _rb.position;
         Vector2 end     = SnapPos(start + dir * tileSize);
         float   elapsed = 0f;
@@ -336,12 +359,18 @@ public class EnemyAI : MonoBehaviour
         while (elapsed < stepDuration)
         {
             elapsed += Time.fixedDeltaTime;
+            // FIX (pushback): re-zero every physics tick. A collision during
+            // the lerp deposits a reaction velocity; suppressing it here
+            // keeps the step animation clean and prevents the entity from
+            // being deflected sideways by another body.
+            _rb.velocity = Vector2.zero;
             _rb.MovePosition(Vector2.Lerp(start, end, Mathf.Clamp01(elapsed / stepDuration)));
             yield return new WaitForFixedUpdate();
         }
 
         _rb.MovePosition(end);
-        _isStepping = false;
+        _rb.velocity = Vector2.zero; // guarantee a clean stop at tile boundary
+        _isStepping  = false;
     }
 
     public void BeginChase()
