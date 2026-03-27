@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(EnemyAI))]
@@ -15,7 +16,6 @@ public class EnemyController : MonoBehaviour
     public float      tileSize = 0.5f;
 
     [Header("Arrow (Archer only)")]
-    [Tooltip("Drag your Arrow prefab here on the Archer prefab.")]
     public GameObject arrowPrefab;
 
     [Header("VFX")]
@@ -143,7 +143,8 @@ public class EnemyController : MonoBehaviour
         SetState(_ai.GetResumeState());
     }
 
-
+    // Called by player via Space — stays in Possessed state throughout.
+    // NEVER calls SetState, so possession is never torn down by the ability.
     public bool UsePossessedAbility()
     {
         if (_atkCooldown > 0f) return false;
@@ -155,6 +156,7 @@ public class EnemyController : MonoBehaviour
     {
         _atkCooldown = stats.attackCooldown;
         yield return StartCoroutine(RunAttackForType(stats.enemyType));
+        // Stay in Possessed — do NOT resume AI
     }
 
     private IEnumerator RunAttackForType(EnemyStats.EnemyType type)
@@ -174,13 +176,16 @@ public class EnemyController : MonoBehaviour
             case EnemyStats.EnemyType.Mage:
                 yield return StartCoroutine(MageAttack());
                 break;
+            case EnemyStats.EnemyType.Rat:
+            case EnemyStats.EnemyType.Chomp:
+                yield return StartCoroutine(BiteAttack());
+                break;
         }
     }
 
     private IEnumerator SwordAttack()
     {
         _anim?.PlayAttack();
-
         Vector2 fwd  = _ai.FacingDirection;
         Vector2 perp = new Vector2(-fwd.y, fwd.x);
 
@@ -197,39 +202,50 @@ public class EnemyController : MonoBehaviour
 
         foreach (var pos in new[] { centre, left, right })
         {
-            var hits = Physics2D.OverlapBoxAll(pos, Vector2.one * tileSize * 0.85f, 0f);
-            foreach (var h in hits)
+            foreach (var h in Physics2D.OverlapBoxAll(pos, Vector2.one * tileSize * 0.85f, 0f))
                 HitTarget(h, stats.attackDamage);
         }
 
         yield return new WaitForSeconds(0.2f);
-        if (tc) Destroy(tc);
-        if (tl) Destroy(tl);
-        if (tr) Destroy(tr);
+        if (tc) Destroy(tc); if (tl) Destroy(tl); if (tr) Destroy(tr);
         AttackTileActive = false;
         _anim?.PlayIdle();
     }
 
+    // Spawns a row of warning tiles along the arrow path, then fires the arrow.
     private IEnumerator ArcherAttack()
     {
         _anim?.PlayAttack();
+
+        Vector2 fwd         = _ai.FacingDirection;
+        bool    wasPossessed = IsPossessed;
+        int     range        = stats.arrowRange > 0 ? stats.arrowRange : 6;
+
+        var preview = new List<GameObject>();
+        for (int i = 1; i <= range; i++)
+        {
+            Vector3 pos = transform.position + (Vector3)(fwd * tileSize * i);
+            var t = SpawnTile(pos, tileSize * 0.5f);
+            if (t != null) preview.Add(t);
+        }
+
         yield return new WaitForSeconds(0.35f);
 
-        bool firedByPossessed = IsPossessed;
+        foreach (var t in preview) if (t) Destroy(t);
+        preview.Clear();
 
         if (arrowPrefab != null)
         {
             var go   = Instantiate(arrowPrefab, transform.position, Quaternion.identity);
             var proj = go.GetComponent<ArrowProjectile>() ?? go.AddComponent<ArrowProjectile>();
-            proj.Init(_ai.FacingDirection, stats.arrowSpeed, stats.attackDamage, gameObject, firedByPossessed);
+            proj.Init(fwd, stats.arrowSpeed, stats.attackDamage, gameObject, wasPossessed);
         }
         else
         {
-            Debug.LogWarning($"[{gameObject.name}] arrowPrefab not assigned.");
             var go   = new GameObject("Arrow_fallback");
             go.transform.position = transform.position;
             var proj = go.AddComponent<ArrowProjectile>();
-            proj.Init(_ai.FacingDirection, stats.arrowSpeed, stats.attackDamage, gameObject, firedByPossessed);
+            proj.Init(fwd, stats.arrowSpeed, stats.attackDamage, gameObject, wasPossessed);
         }
 
         yield return new WaitForSeconds(0.15f);
@@ -252,8 +268,8 @@ public class EnemyController : MonoBehaviour
         {
             rb.MovePosition(rb.position + dir * spd * Time.fixedDeltaTime);
             elapsed += Time.deltaTime;
-            var cols = Physics2D.OverlapCircleAll(transform.position, tileSize * 0.4f);
-            foreach (var h in cols) HitTarget(h, stats.bashDamage);
+            foreach (var h in Physics2D.OverlapCircleAll(transform.position, tileSize * 0.4f))
+                HitTarget(h, stats.bashDamage);
             yield return null;
         }
 
@@ -265,14 +281,15 @@ public class EnemyController : MonoBehaviour
     private IEnumerator MageAttack()
     {
         _anim?.PlayAttack();
+        var player = GameObject.FindWithTag("Player");
+        if (player == null) yield break;
 
-        Vector3 targetPos = _ai.GetCurrentTarget();
+        Vector3 targetPos = SnapToTile(player.transform.position);
         var tile = SpawnTile(targetPos, stats.meteorRadius * tileSize);
         AttackTileActive = true;
         yield return new WaitForSeconds(stats.meteorDelay);
 
-        var hits = Physics2D.OverlapCircleAll(targetPos, stats.meteorRadius * tileSize);
-        foreach (var h in hits)
+        foreach (var h in Physics2D.OverlapCircleAll(targetPos, stats.meteorRadius * tileSize))
             HitTarget(h, stats.attackDamage);
 
         if (tile) Destroy(tile);
@@ -280,19 +297,41 @@ public class EnemyController : MonoBehaviour
         _anim?.PlayIdle();
     }
 
+    private IEnumerator BiteAttack()
+    {
+        _anim?.PlayAttack();
+        Vector3 bitePos = transform.position + (Vector3)(_ai.FacingDirection * tileSize * 0.6f);
+        var tile = SpawnTile(bitePos, tileSize * 0.9f);
+        AttackTileActive = true;
 
-    private void HitTarget(Collider2D h, float damage)
+        yield return new WaitForSeconds(0.2f);
+
+        foreach (var h in Physics2D.OverlapCircleAll(bitePos, tileSize * 0.5f))
+            HitTarget(h, stats.attackDamage);
+
+        yield return new WaitForSeconds(0.1f);
+        if (tile) Destroy(tile);
+        AttackTileActive = false;
+        _anim?.PlayIdle();
+    }
+
+    // Routes damage correctly:
+    //  - Always hits the player body
+    //  - When this enemy IS possessed → hits all non-possessed enemies (friendly fire)
+    //  - When this enemy is NOT possessed → hits only the possessed enemy (if any)
+    //  - Never self-damage
+    private void HitTarget(Collider2D h, float dmg)
     {
         if (h == null) return;
-
-        h.GetComponent<PlayerController>()?.TakeDamage(damage); // Gagan
+        h.GetComponent<PlayerController>()?.TakeDamage(dmg);
 
         var ec = h.GetComponent<EnemyController>();
         if (ec == null || ec == this) return;
 
- 
-        if (ec.IsPossessed || IsPossessed)
-            ec.TakeDamage(damage);
+        if (IsPossessed && !ec.IsPossessed)
+            ec.TakeDamage(dmg);
+        else if (!IsPossessed && ec.IsPossessed)
+            ec.TakeDamage(dmg);
     }
 
     public void TakeDamage(float amount)
@@ -321,11 +360,15 @@ public class EnemyController : MonoBehaviour
         _col.enabled = false;
         _anim?.PlayDeath();
         if (deathVFXPrefab) Instantiate(deathVFXPrefab, transform.position, Quaternion.identity);
-        OnEnemyDied?.Invoke(this); 
+        OnEnemyDied?.Invoke(this);
         StartCoroutine(DelayedDestroy(0.8f));
     }
 
-    private IEnumerator DelayedDestroy(float d) { yield return new WaitForSeconds(d); Destroy(gameObject); }
+    private IEnumerator DelayedDestroy(float d)
+    {
+        yield return new WaitForSeconds(d);
+        Destroy(gameObject);
+    }
 
     private Vector3 SnapToTile(Vector3 p) =>
         new Vector3(Mathf.Round(p.x / tileSize) * tileSize,
@@ -354,7 +397,7 @@ public class ArrowProjectile : MonoBehaviour
     private float      _damage;
     private GameObject _owner;
     private bool       _ready;
-    private bool       _firedByPossessed; 
+    private bool       _firedByPossessed;
 
     public void Init(Vector2 dir, float speed, float damage, GameObject owner)
         => Init(dir, speed, damage, owner, false);
@@ -368,8 +411,8 @@ public class ArrowProjectile : MonoBehaviour
         _ready            = true;
         _firedByPossessed = firedByPossessed;
 
-        float angle = Mathf.Atan2(_dir.y, _dir.x) * Mathf.Rad2Deg;
-        transform.rotation = Quaternion.AngleAxis(angle, Vector3.forward);
+        transform.rotation = Quaternion.AngleAxis(
+            Mathf.Atan2(_dir.y, _dir.x) * Mathf.Rad2Deg, Vector3.forward);
 
         if (!GetComponent<Collider2D>())
         {
@@ -377,8 +420,7 @@ public class ArrowProjectile : MonoBehaviour
             c.isTrigger = true;
             c.radius    = 0.1f;
         }
-        else
-            GetComponent<Collider2D>().isTrigger = true;
+        else GetComponent<Collider2D>().isTrigger = true;
 
         Destroy(gameObject, 5f);
     }
@@ -391,24 +433,17 @@ public class ArrowProjectile : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (!_ready) return;
-        if (other.gameObject == _owner) return;
-        if (other.isTrigger) return;
+        if (!_ready || other.gameObject == _owner || other.isTrigger) return;
 
         bool hit = false;
-
         var pc = other.GetComponent<PlayerController>();
-        if (pc != null) { pc.TakeDamage(_damage); hit = true; } 
+        if (pc != null) { pc.TakeDamage(_damage); hit = true; }
 
-      
         var ec = other.GetComponent<EnemyController>();
         if (ec != null && ec.gameObject != _owner)
         {
             if (ec.IsPossessed || _firedByPossessed)
-            {
-                ec.TakeDamage(_damage);
-                hit = true;
-            }
+            { ec.TakeDamage(_damage); hit = true; }
         }
 
         if (hit) Destroy(gameObject);
