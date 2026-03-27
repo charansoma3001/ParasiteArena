@@ -35,10 +35,6 @@ public class EnemyController : MonoBehaviour
     private GameObject    _possessedIndicator;
     private Collider2D    _col;
 
-    // ---------------------------------------------------------------
-    // FIX (pushback / possession): track every attack tile we spawn
-    // so we can bulk-destroy them when possession interrupts an attack.
-    // ---------------------------------------------------------------
     private readonly List<GameObject> _activeTiles = new();
 
     public static event System.Action<EnemyController> OnEnemyDied;
@@ -109,16 +105,6 @@ public class EnemyController : MonoBehaviour
                 _anim?.PlayBlock();
                 break;
 
-            // -----------------------------------------------------------------
-            // FIX (possession during attack):
-            //   StopAllCoroutines() kills any in-flight PerformAttack or
-            //   PossessedAttack coroutine so it can never call SetState and
-            //   kick the enemy back out of Possessed.
-            //   ClearActiveTiles() removes any attack-tile visuals that the
-            //   interrupted coroutine would have cleaned up itself.
-            //   _atkCooldown is zeroed so the first player ability fires
-            //   immediately rather than waiting out the enemy's own cooldown.
-            // -----------------------------------------------------------------
             case EnemyState.Possessed:
                 StopAllCoroutines();
                 ClearActiveTiles();
@@ -166,15 +152,11 @@ public class EnemyController : MonoBehaviour
     {
         _atkCooldown = stats.attackCooldown;
         yield return StartCoroutine(RunAttackForType(stats.enemyType));
-        // Only resume AI if we're still in Attacking state.
-        // (If possession interrupted us, SetState already moved us to Possessed
-        //  and StopAllCoroutines killed this coroutine — this line is never reached.)
         if (CurrentState == EnemyState.Attacking)
             SetState(_ai.GetResumeState());
     }
 
-    // Called by player via Space — stays in Possessed state throughout.
-    // NEVER calls SetState, so possession is never torn down by the ability.
+  
     public bool UsePossessedAbility()
     {
         if (_atkCooldown > 0f) return false;
@@ -186,7 +168,6 @@ public class EnemyController : MonoBehaviour
     {
         _atkCooldown = stats.attackCooldown;
         yield return StartCoroutine(RunAttackForType(stats.enemyType));
-        // Stay in Possessed — do NOT resume AI
     }
 
     private IEnumerator RunAttackForType(EnemyStats.EnemyType type)
@@ -216,9 +197,7 @@ public class EnemyController : MonoBehaviour
         }
     }
 
-    // ---------------------------------------------------------------
-    // Individual attack routines
-    // ---------------------------------------------------------------
+  
 
     private IEnumerator SwordAttack()
     {
@@ -249,7 +228,6 @@ public class EnemyController : MonoBehaviour
         _anim?.PlayIdle();
     }
 
-    // Spawns a row of warning tiles along the arrow path, then fires the arrow.
     private IEnumerator ArcherAttack()
     {
         _anim?.PlayAttack();
@@ -303,8 +281,7 @@ public class EnemyController : MonoBehaviour
         var rb = GetComponent<Rigidbody2D>();
         while (elapsed < bashTime)
         {
-            // FIX (pushback): zero velocity each tick so the bash MovePosition
-            // is never compounded by a collision-response velocity.
+    
             rb.velocity = Vector2.zero;
             rb.MovePosition(rb.position + dir * spd * Time.fixedDeltaTime);
             elapsed += Time.deltaTime;
@@ -313,7 +290,7 @@ public class EnemyController : MonoBehaviour
             yield return null;
         }
 
-        rb.velocity = Vector2.zero; // clean stop after bash
+        rb.velocity = Vector2.zero; 
         if (tile) Destroy(tile);
         AttackTileActive = false;
         _anim?.PlayIdle();
@@ -356,20 +333,14 @@ public class EnemyController : MonoBehaviour
         _anim?.PlayIdle();
     }
 
-    // ---------------------------------------------------------------
-    // Boss combo attack: a two-beat strike used by the Orc boss.
-    // Beat 1 — a focused forward lunge tile.
-    // Beat 2 — a sweeping side arc (forward + both flanks).
-    // OrcBossController scales damage/cooldown per phase on top of this.
-    // ---------------------------------------------------------------
+
     private IEnumerator BossComboAttack()
     {
         _anim?.PlayAttack();
         Vector2 fwd  = _ai.FacingDirection;
         Vector2 perp = new Vector2(-fwd.y, fwd.x);
 
-        // --- Beat 1: lunge ---
-        yield return new WaitForSeconds(0.25f); // wind-up pause
+        yield return new WaitForSeconds(0.25f); 
 
         var t1 = SpawnTile(transform.position + (Vector3)(fwd * tileSize * 1.5f), tileSize * 1.1f);
         AttackTileActive = true;
@@ -383,7 +354,6 @@ public class EnemyController : MonoBehaviour
         if (t1) Destroy(t1);
         yield return new WaitForSeconds(0.1f);
 
-        // --- Beat 2: wide sweep ---
         var t2 = SpawnTile(transform.position + (Vector3)(fwd   * tileSize), tileSize);
         var t3 = SpawnTile(transform.position + (Vector3)(perp  * tileSize), tileSize);
         var t4 = SpawnTile(transform.position - (Vector3)(perp  * tileSize), tileSize);
@@ -405,14 +375,7 @@ public class EnemyController : MonoBehaviour
         _anim?.PlayIdle();
     }
 
-    // ---------------------------------------------------------------
-    // Damage routing
-    // Routes damage correctly:
-    //  - Always hits the player body
-    //  - When this enemy IS possessed → hits all non-possessed enemies (friendly fire)
-    //  - When this enemy is NOT possessed → hits only the possessed enemy (if any)
-    //  - Never self-damage
-    // ---------------------------------------------------------------
+
     private void HitTarget(Collider2D h, float dmg)
     {
         if (h == null) return;
@@ -463,11 +426,7 @@ public class EnemyController : MonoBehaviour
         Destroy(gameObject);
     }
 
-    // ---------------------------------------------------------------
-    // Tile helpers
-    // ---------------------------------------------------------------
 
-    // FIX: register every tile so ClearActiveTiles can bulk-destroy them.
     private GameObject SpawnTile(Vector3 pos, float size)
     {
         if (!attackTilePrefab) return null;
@@ -477,13 +436,10 @@ public class EnemyController : MonoBehaviour
         return t;
     }
 
-    // Destroys all currently tracked attack tiles and resets the state flag.
-    // Called when possession interrupts an ongoing attack so no "ghost" danger
-    // tiles are left in the world while the player is in control.
     private void ClearActiveTiles()
     {
         foreach (var t in _activeTiles)
-            if (t) Destroy(t); // Unity no-ops Destroy on already-destroyed objects
+            if (t) Destroy(t); 
         _activeTiles.Clear();
         AttackTileActive = false;
     }
@@ -500,9 +456,6 @@ public class EnemyController : MonoBehaviour
     }
 }
 
-// ===================================================================
-// ArrowProjectile — unchanged from original
-// ===================================================================
 public class ArrowProjectile : MonoBehaviour
 {
     private Vector2    _dir;
