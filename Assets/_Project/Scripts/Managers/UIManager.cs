@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using TMPro; // Required for Unity's modern text system
 
@@ -17,13 +19,28 @@ public class UIManager : MonoBehaviour
     public TextMeshProUGUI possessionTimeText;
     public TextMeshProUGUI decayRateText;
 
+    [Header("Message HUD")]
+    public GameObject messageHUDPanel;
+    public TextMeshProUGUI messageHUDText;
+    public float defaultMessageDuration = 1.5f;
+
     private PlayerController _player;
     private WaveManager _waveManager;
     private bool _isWaveTimerSubscribed;
+    private Coroutine _messageHUDRoutine;
+    private readonly Queue<QueuedHUDMessage> _messageQueue = new Queue<QueuedHUDMessage>();
+
+    private struct QueuedHUDMessage
+    {
+        public string Text;
+        public float Duration;
+    }
 
     private void Start()
     {
         PlayerController.OnHealthChanged += UpdateHealthUI;
+
+        HideAndClearMessageHUD();
 
         if (timerText == null)
         {
@@ -77,6 +94,14 @@ public class UIManager : MonoBehaviour
         {
             _waveManager.OnTimerChanged -= UpdateTimerUI;
         }
+
+        if (_messageHUDRoutine != null)
+        {
+            StopCoroutine(_messageHUDRoutine);
+            _messageHUDRoutine = null;
+        }
+
+        _messageQueue.Clear();
 
         if (StatManager.Instance != null)
         {
@@ -170,5 +195,48 @@ public class UIManager : MonoBehaviour
         {
             targetText.text = "-";
         }
+    }
+
+    public void ShowMessageHUD(string message, float duration = -1f)
+    {
+        if (messageHUDPanel == null || messageHUDText == null)
+        {
+            Debug.LogWarning("UIManager MessageHUD references are not assigned in the Inspector.");
+            return;
+        }
+
+        float showDuration = duration > 0f ? duration : defaultMessageDuration;
+        _messageQueue.Enqueue(new QueuedHUDMessage
+        {
+            Text = message,
+            Duration = showDuration
+        });
+
+        if (_messageHUDRoutine == null)
+            _messageHUDRoutine = StartCoroutine(ProcessMessageHUDQueue());
+    }
+
+    private IEnumerator ProcessMessageHUDQueue()
+    {
+        while (_messageQueue.Count > 0)
+        {
+            QueuedHUDMessage queuedMessage = _messageQueue.Dequeue();
+            messageHUDText.text = queuedMessage.Text;
+            messageHUDPanel.SetActive(true);
+            yield return new WaitForSeconds(queuedMessage.Duration);
+            HideAndClearMessageHUD();
+        }
+
+        HideAndClearMessageHUD();
+        _messageHUDRoutine = null;
+    }
+
+    private void HideAndClearMessageHUD()
+    {
+        if (messageHUDText != null)
+            messageHUDText.text = string.Empty;
+
+        if (messageHUDPanel != null)
+            messageHUDPanel.SetActive(false);
     }
 }
