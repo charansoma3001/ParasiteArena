@@ -24,10 +24,18 @@ public class UIManager : MonoBehaviour
     public TextMeshProUGUI messageHUDText;
     public float defaultMessageDuration = 1.5f;
 
+    [Header("Controls HUD")]
+    public GameObject controlsHUDPanel;
+
+    [Header("Pause Menu")]
+    public GameObject gamePausedPanel;
+
     private PlayerController _player;
     private WaveManager _waveManager;
     private bool _isWaveTimerSubscribed;
     private Coroutine _messageHUDRoutine;
+    private Coroutine _controlsHUDRoutine;
+    private bool _isGamePaused;
     private readonly Queue<QueuedHUDMessage> _messageQueue = new Queue<QueuedHUDMessage>();
 
     private struct QueuedHUDMessage
@@ -41,6 +49,8 @@ public class UIManager : MonoBehaviour
         PlayerController.OnHealthChanged += UpdateHealthUI;
 
         HideAndClearMessageHUD();
+        HideControlsHUD();
+        HideGamePausedPanel();
 
         if (timerText == null)
         {
@@ -85,6 +95,11 @@ public class UIManager : MonoBehaviour
         {
             TryInitializeWaveTimerUI();
         }
+
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            ToggleGamePausedPanel();
+        }
     }
 
     private void OnDestroy()
@@ -101,11 +116,23 @@ public class UIManager : MonoBehaviour
             _messageHUDRoutine = null;
         }
 
+        if (_controlsHUDRoutine != null)
+        {
+            StopCoroutine(_controlsHUDRoutine);
+            _controlsHUDRoutine = null;
+        }
+
         _messageQueue.Clear();
 
         if (StatManager.Instance != null)
         {
             StatManager.Instance.OnStatsChanged -= UpdateStatHUD;
+        }
+
+        if (_isGamePaused)
+        {
+            Time.timeScale = 1f;
+            _isGamePaused = false;
         }
 
         // CRITICAL: Always unsubscribe when this object is destroyed to prevent memory leaks!
@@ -238,5 +265,58 @@ public class UIManager : MonoBehaviour
 
         if (messageHUDPanel != null)
             messageHUDPanel.SetActive(false);
+    }
+
+    public void ShowControlsHUD()
+    {
+        if (controlsHUDPanel == null)
+        {
+            Debug.LogWarning("UIManager controlsHUDPanel is not assigned in the Inspector.");
+            return;
+        }
+
+        controlsHUDPanel.SetActive(true);
+    }
+
+    public void HideControlsHUD()
+    {
+        if (controlsHUDPanel != null)
+            controlsHUDPanel.SetActive(false);
+    }
+
+    private bool IsControlsHUDOpen()
+    {
+        return controlsHUDPanel != null && controlsHUDPanel.activeSelf;
+    }
+
+    public void ToggleGamePausedPanel()
+    {
+        if (_isGamePaused)
+            HideGamePausedPanel();
+        else
+            ShowGamePausedPanel();
+    }
+
+    public void ShowGamePausedPanel()
+    {
+        _isGamePaused = true;
+        Time.timeScale = 0f;
+
+        if (gamePausedPanel != null)
+            gamePausedPanel.SetActive(true);
+        else
+            Debug.LogWarning("UIManager gamePausedPanel is not assigned in the Inspector.");
+    }
+
+    public void HideGamePausedPanel()
+    {
+        if (IsControlsHUDOpen())
+            return;
+
+        _isGamePaused = false;
+        Time.timeScale = 1f;
+
+        if (gamePausedPanel != null)
+            gamePausedPanel.SetActive(false);
     }
 }

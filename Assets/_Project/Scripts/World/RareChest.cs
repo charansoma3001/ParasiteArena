@@ -57,13 +57,13 @@ public class RareChest : MonoBehaviour
         solidCollider.enabled = false;
 
         OnChestOpened?.Invoke(transform.position);
-        Debug.Log($"[RareChest] Opened at {transform.position}");
+        // Debug.Log($"[RareChest] Opened at {transform.position}");
 
-        UIManager uiManager = FindFirstObjectByType<UIManager>();
-        if (uiManager != null)
-        {
-            uiManager.ShowMessageHUD("Rare chest opened!");
-        }
+        // UIManager uiManager = FindFirstObjectByType<UIManager>();
+        // if (uiManager != null)
+        // {
+        //     uiManager.ShowMessageHUD("Rare chest opened!");
+        // }
     }
 
 #if UNITY_EDITOR
