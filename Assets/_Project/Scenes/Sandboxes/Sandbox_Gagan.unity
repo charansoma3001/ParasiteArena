@@ -931,12 +931,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!1 &747902856 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 1641877084124656616, guid: c39ed9f6af7744da0b925f267e761f3d,
-    type: 3}
-  m_PrefabInstance: {fileID: 2374443409904153152}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &841454875
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1016,24 +1010,6 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 2374443409904153152}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &911879858
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 747902856}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 77f67c344a23d3641a1818d1cedc6f6c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  speed: 2
-  dashSpeed: 14
-  dashDuration: 0.12
-  dashCooldown: 0.7
-  maxHealth: 100
-  possessionRange: 0.8
 --- !u!1001 &1136722701
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1654,15 +1630,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 7592588101591256135, guid: c39ed9f6af7744da0b925f267e761f3d, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 1641877084124656616, guid: c39ed9f6af7744da0b925f267e761f3d,
-        type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 911879858}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c39ed9f6af7744da0b925f267e761f3d, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
