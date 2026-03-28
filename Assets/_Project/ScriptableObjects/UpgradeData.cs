@@ -8,7 +8,10 @@ public enum StatType
     AttackDamage,
     DashCooldown,
     PossessionDuration,
-    HostDecayRate
+    HostDecayRate,
+    DashSpeed,
+    DashDuration,
+    PossessionRange
 }
 
 // 1. This is the new container for a single stat change
