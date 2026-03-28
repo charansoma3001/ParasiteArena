@@ -205,9 +205,18 @@ public class PlayerController : MonoBehaviour
         if (!CompareTag("Player")) return;
         if (IsDead || IsInvincible) return;
         if (IsPossessing) return;
+        
         CurrentHealth = Mathf.Max(0, CurrentHealth - Mathf.RoundToInt(amount));
         OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
-        if (CurrentHealth <= 0) Die();
+        
+        if (CurrentHealth <= 0) 
+        {
+            Die();
+        }
+        else 
+        {
+            _anim.SetTrigger("Hit");
+        }
     }
 
     private void Die()
@@ -216,6 +225,15 @@ public class PlayerController : MonoBehaviour
         IsDead       = true;
         _rb.velocity = Vector2.zero;
         SetAnimFloat("Speed", 0);
+        _anim.SetTrigger("Die");
+        StartCoroutine(DeathRoutine());
+    }
+
+    private IEnumerator DeathRoutine()
+    {
+        float deathAnimLength = _anim.GetCurrentAnimatorStateInfo(0).length;
+        yield return new WaitForSecondsRealtime(deathAnimLength + 1f);
+
         OnPlayerDied?.Invoke();
     }
 
