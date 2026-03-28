@@ -30,6 +30,9 @@ public class UIManager : MonoBehaviour
     [Header("Pause Menu")]
     public GameObject gamePausedPanel;
 
+    [Header("Game Over Screen")]
+    public GameObject gameOverPanel;
+
     [Header("Wave Countdown")]
     public TextMeshProUGUI waveCountdownText;
 
@@ -50,10 +53,12 @@ public class UIManager : MonoBehaviour
     private void Start()
     {
         PlayerController.OnHealthChanged += UpdateHealthUI;
+        PlayerController.OnPlayerDied += ShowGameOverScreen;
 
         HideAndClearMessageHUD();
         HideControlsHUD();
         HideGamePausedPanel();
+        HideGameOverScreen();
         HideWaveCountdown();
 
         if (timerText == null)
@@ -353,5 +358,21 @@ public class UIManager : MonoBehaviour
     {
         if (waveCountdownText != null)
             waveCountdownText.gameObject.SetActive(false);
+    }
+
+    public void ShowGameOverScreen()
+    {
+        Time.timeScale = 0f; // Freeze the game
+
+        if (gameOverPanel != null)
+            gameOverPanel.SetActive(true);
+        else
+            Debug.LogWarning("UIManager gameOverPanel is not assigned in the Inspector.");
+    }
+
+    private void HideGameOverScreen()
+    {
+        if (gameOverPanel != null)
+            gameOverPanel.SetActive(false);
     }
 }

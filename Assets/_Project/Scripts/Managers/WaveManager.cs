@@ -46,6 +46,15 @@ public class WaveManager : MonoBehaviour
         
         // 2. Immediately start Wave 1 countdown (no initial delay)
         StartNextWave();
+
+        // 3. Listen for player death
+        PlayerController.OnPlayerDied += OnPlayerDied;
+    }
+
+    private void OnPlayerDied()
+    {
+        ChangeState(GameState.GameOver);
+        Debug.Log("*** GAME OVER ***");
     }
 
     private void Update()
