@@ -48,13 +48,17 @@ public class RareChest : MonoBehaviour
 
     private void OpenChest()
     {
-        isOpen= true;
+        isOpen = true;
         playerNearby = false;
 
         if (openSprite != null)
             renderer.sprite = openSprite;
 
         solidCollider.enabled = false;
+
+        ChestSystem chestSystem = GetComponent<ChestSystem>();
+        if (chestSystem != null)
+            chestSystem.OpenChest();
 
         OnChestOpened?.Invoke(transform.position);
         // Debug.Log($"[RareChest] Opened at {transform.position}");

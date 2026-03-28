@@ -6,13 +6,13 @@ public class MapManager : MonoBehaviour
     public int height = 60;
 
     //Larger values = more variation Standard value is 6f
-    public float noiseScale = 6f;
+    public float noiseScale = 9f;
 
     // Number of noise octaves layered together. More octaves = more detail. Standard value is 4
     public int octaves = 4;
 
     //How quickly amplitude decreases per octave. Higher = smoother. Standard value is 0.5f
-    public float persistence = 0.5f;
+    public float persistence = 0.45f;
 
     //How quickly frequency increases per octave. Standard value is 2f
     public float lacunarity = 2f;
@@ -27,39 +27,39 @@ public class MapManager : MonoBehaviour
     public float chestMinSeparation = 6f;
 
     //Noise value at which high grass begins to appear. Standard = 0.5f;
-    public float highGrassThreshold = 0.52f;
+    public float highGrassThreshold = 0.58f;
 
     //Noise value at which trees replace high grass. Standard = 0.7f
-    public float treeThreshold = 0.72f;
+    public float treeThreshold = 0.80f;
 
     //Radius entirely clear of prefabs. Stardard = 10f;
-    public float openCentreRadius = 10f;
+    public float openCentreRadius = 12f;
 
     //Prevents trees from blocking the playable boundary. Standard = 0.3
     public int borderClearWidth = 3;
-    public float vegetationJitter = 0.28f;
+    public float vegetationJitter = 0.32f;
 
      //Set to 0 for a random seed each play
     public int seed = 0;
 
     //parent transforms for editor hierarchy organisation.
     private Transform groundParent;
-    private Transform _vegetationParent;
-    private Transform _chestParent;
+    private Transform vegetationParent;
+    private Transform chestParent;
 
     //query terrain type without re-computing noise.
-    private float[,] _noiseMap;
+    private float[,] noiseMap;
 
     // Tracks world positions of already-placed chests so we can enforce the minimum separation constraint during generation.
-    private System.Collections.Generic.List<Vector2> _placedChestPositions = new System.Collections.Generic.List<Vector2>();
+    private System.Collections.Generic.List<Vector2> placedChestPositions = new System.Collections.Generic.List<Vector2>();
 
     //Returns the noise value [0,1] at tile coordinate (x, y).
     public float GetNoiseValue(int x, int y)
     {
-        if (_noiseMap == null) return 0f;
+        if (noiseMap == null) return 0f;
         x = Mathf.Clamp(x, 0, width - 1);
         y = Mathf.Clamp(y, 0, height - 1);
-        return _noiseMap[x, y];
+        return noiseMap[x, y];
     }
 
     //Returns the TerrainType at tile coordinate (x, y).
@@ -87,14 +87,14 @@ public class MapManager : MonoBehaviour
 
         // Build parent objects for clean hierarchy.
         groundParent     = CreateParent("Ground");
-        _vegetationParent = CreateParent("Vegetation");
-        _chestParent      = CreateParent("Chests");
+        vegetationParent = CreateParent("Vegetation");
+        chestParent      = CreateParent("Chests");
 
         // Clear chest position cache for reproducible placement.
-        _placedChestPositions.Clear();
+        placedChestPositions.Clear();
 
         // Generate the fractal noise map.
-        _noiseMap = BuildNoiseMap(resolvedSeed);
+        noiseMap = BuildNoiseMap(resolvedSeed);
 
         // Place tiles.
         for (int x = 0; x < width; x++)
@@ -121,7 +121,7 @@ public class MapManager : MonoBehaviour
         // Skip vegetation in protected cells.
         if (IsProtectedCell(x, y)) return;
 
-        float noiseValue = _noiseMap[x, y];
+        float noiseValue = noiseMap[x, y];
 
         if (noiseValue >= treeThreshold)
         {
@@ -130,7 +130,7 @@ public class MapManager : MonoBehaviour
                 // Trees use tighter jitter — they are hard obstacles and
                 // visually large, so less offset looks more intentional.
                 Vector3 jitter = RandomJitter(vegetationJitter * 0.5f);
-                Instantiate(treePrefab, basePos + jitter, Quaternion.identity, _vegetationParent);
+                Instantiate(treePrefab, basePos + jitter, Quaternion.identity, vegetationParent);
             }
         }
         else if (noiseValue >= highGrassThreshold)
@@ -138,7 +138,7 @@ public class MapManager : MonoBehaviour
             if (highGrassPrefab != null)
             {
                 Vector3 jitter = RandomJitter(vegetationJitter);
-                Instantiate(highGrassPrefab, basePos + jitter, Quaternion.identity, _vegetationParent);
+                Instantiate(highGrassPrefab, basePos + jitter, Quaternion.identity, vegetationParent);
             }
         }
     }
@@ -179,7 +179,7 @@ public class MapManager : MonoBehaviour
             if (placed >= chestCount) break;
 
             bool tooClose = false;
-            foreach (Vector2 existing in _placedChestPositions)
+            foreach (Vector2 existing in placedChestPositions)
             {
                 if ((pos - existing).sqrMagnitude < sqrMinSep)
                 {
@@ -201,7 +201,7 @@ public class MapManager : MonoBehaviour
     {
         // Chest sits on the XY plane at z=0, matching all other props.
         Vector3 spawnPos = new Vector3(worldPos.x, worldPos.y, 0f);
-        GameObject chest = Instantiate(chestPrefab, spawnPos, Quaternion.identity, _chestParent);
+        GameObject chest = Instantiate(chestPrefab, spawnPos, Quaternion.identity, chestParent);
         chest.name = $"RareChest ({(int)worldPos.x},{(int)worldPos.y})";
 
         // Wire the RareChest component.  Add one automatically if the designer
@@ -226,7 +226,7 @@ public class MapManager : MonoBehaviour
         AddInteractTrigger(chest, 1.5f);
 
         // Record position for separation checks.
-        _placedChestPositions.Add(worldPos);
+        placedChestPositions.Add(worldPos);
     }
     private void AddInteractTrigger(GameObject chestGO, float radius)
     {

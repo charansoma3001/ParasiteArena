@@ -25,6 +25,9 @@ public class ShopManager : MonoBehaviour
     [Header("UI Panel Reference")]
     public GameObject shopPanel; // The main UI window to toggle on/off
 
+    [Header("Wave Button")]
+    public Button startNextWaveButton;
+
     [Header("Slot 1 References")]
     public Button button1;
     public TextMeshProUGUI nameText1;
@@ -55,12 +58,21 @@ public class ShopManager : MonoBehaviour
     public void OpenShop()
     {
         shopPanel.SetActive(true);
+        if (startNextWaveButton != null) startNextWaveButton.interactable = true;
         RollShopItems();
     }
 
     public void CloseShop()
     {
         shopPanel.SetActive(false);
+        if (startNextWaveButton != null) startNextWaveButton.interactable = false;
+    }
+
+    // Link this to the Start Next Wave button OnClick in the Inspector
+    public void StartNextWave()
+    {
+        if (WaveManager.Instance != null)
+            WaveManager.Instance.StartNextWave();
     }
 
     private void RollShopItems()
