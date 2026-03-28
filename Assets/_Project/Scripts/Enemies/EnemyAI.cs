@@ -134,6 +134,7 @@ public class EnemyAI : MonoBehaviour
         if (tilesDist <= _stats.attackRange)
         {
             FacingDirection = CardinalDir(target - transform.position);
+            _anim?.SetFacing(FacingDirection);
             _ctrl.TriggerAttack();
             return;
         }
@@ -165,6 +166,7 @@ public class EnemyAI : MonoBehaviour
         if (aligned && inRange && tilesDist > 0)
         {
             FacingDirection = CardinalDir(target - transform.position);
+            _anim?.SetFacing(FacingDirection);
             _ctrl.TriggerAttack();
             return;
         }
@@ -236,6 +238,7 @@ public class EnemyAI : MonoBehaviour
             if (tilesDist <= _stats.attackRange)
             {
                 FacingDirection = CardinalDir(_player.position - transform.position);
+                _anim?.SetFacing(FacingDirection);
                 _ctrl.TriggerAttack();
                 return;
             }
@@ -346,7 +349,7 @@ public class EnemyAI : MonoBehaviour
         _isStepping        = true;
         _stepCooldownTimer = stepCooldown;
         FacingDirection    = dir;
-        FlipSprite(dir);
+        _anim?.SetFacing(dir);
 
         // FIX (pushback): clear any residual physics velocity before we
         // start the MovePosition lerp so the two don't fight each other.
@@ -442,11 +445,4 @@ public class EnemyAI : MonoBehaviour
             : new Vector2(0f, Mathf.Sign(d.y));
     }
 
-    private void FlipSprite(Vector2 dir)
-    {
-        var sr = GetComponentInChildren<SpriteRenderer>();
-        if (sr == null) return;
-        if      (dir.x > 0.1f)  sr.flipX = false;
-        else if (dir.x < -0.1f) sr.flipX = true;
-    }
 }
