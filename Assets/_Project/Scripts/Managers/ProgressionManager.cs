@@ -10,6 +10,14 @@ public class ProgressionManager : MonoBehaviour
     public int CurrentLevel = 1;
     public int CurrentXP = 0;
     public int XPToNextLevel = 100; // Base XP needed for level 2
+
+    [Header("Enemy Kill XP")]
+    public int baseKillXP = 20;
+    public float levelXPMultiplier = 1.5f;
+
+    [Header("Enemy Kill Gold")]
+    public int minGoldPerKill = 30;
+    public int maxGoldPerKill = 50;
     
     [Header("Economy")]
     public int CurrentGold = 0;
@@ -23,6 +31,16 @@ public class ProgressionManager : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.P)) AddXP(45);
         if (Input.GetKeyDown(KeyCode.G)) AddGold(10);
+    }
+
+    private void OnEnable()
+    {
+        EnemyController.OnEnemyDied += HandleEnemyDied;
+    }
+
+    private void OnDisable()
+    {
+        EnemyController.OnEnemyDied -= HandleEnemyDied;
     }
 
     private void Awake()
@@ -50,6 +68,20 @@ public class ProgressionManager : MonoBehaviour
 
         // Announce to the rest of the game that XP changed (Gagan's UI will listen for this)
         OnXPAdded?.Invoke(CurrentXP, XPToNextLevel);
+    }
+
+    private void HandleEnemyDied(EnemyController deadEnemy)
+    {
+        if (deadEnemy == null) return;
+
+        int levelIndex = Mathf.Max(0, CurrentLevel - 1);
+        float scaledXP = baseKillXP * Mathf.Pow(levelXPMultiplier, levelIndex);
+        AddXP(Mathf.RoundToInt(scaledXP));
+
+        int minGold = Mathf.Min(minGoldPerKill, maxGoldPerKill);
+        int maxGold = Mathf.Max(minGoldPerKill, maxGoldPerKill);
+        int goldReward = UnityEngine.Random.Range(minGold, maxGold + 1);
+        AddGold(goldReward);
     }
 
     private void LevelUp()
