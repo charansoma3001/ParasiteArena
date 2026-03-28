@@ -30,6 +30,9 @@ public class UIManager : MonoBehaviour
     [Header("Pause Menu")]
     public GameObject gamePausedPanel;
 
+    [Header("Wave Countdown")]
+    public TextMeshProUGUI waveCountdownText;
+
     private PlayerController _player;
     private WaveManager _waveManager;
     private bool _isWaveTimerSubscribed;
@@ -51,6 +54,7 @@ public class UIManager : MonoBehaviour
         HideAndClearMessageHUD();
         HideControlsHUD();
         HideGamePausedPanel();
+        HideWaveCountdown();
 
         if (timerText == null)
         {
@@ -108,6 +112,7 @@ public class UIManager : MonoBehaviour
         if (_waveManager != null && _isWaveTimerSubscribed)
         {
             _waveManager.OnTimerChanged -= UpdateTimerUI;
+            _waveManager.OnCountdownChanged -= UpdateWaveCountdownUI;
         }
 
         if (_messageHUDRoutine != null)
@@ -154,6 +159,7 @@ public class UIManager : MonoBehaviour
             return;
 
         _waveManager.OnTimerChanged += UpdateTimerUI;
+        _waveManager.OnCountdownChanged += UpdateWaveCountdownUI;
         _isWaveTimerSubscribed = true;
 
         // Push an immediate value so the timer text never stays as blank/default.
@@ -161,6 +167,9 @@ public class UIManager : MonoBehaviour
             ? _waveManager.WaveTimer
             : _waveManager.timePerWave;
         UpdateTimerUI(initialTime);
+        
+        // Push initial countdown value
+        UpdateWaveCountdownUI(_waveManager.PrepCountdown);
     }
 
     // --- The Event Listeners ---
@@ -194,6 +203,20 @@ public class UIManager : MonoBehaviour
         // Format the raw float into clean seconds (e.g. 59, 58, 57...)
         if (timerText != null)
             timerText.text = "Time: " + Mathf.Max(0, Mathf.CeilToInt(timeLeft)).ToString();
+    }
+
+    private void UpdateWaveCountdownUI(float countdownTime)
+    {
+        if (waveCountdownText != null)
+        {
+            waveCountdownText.text = "Wave starts in: " + Mathf.CeilToInt(countdownTime).ToString();
+            
+            // Show countdown when it's counting down
+            if (countdownTime > 0)
+                ShowWaveCountdown();
+            else
+                HideWaveCountdown();
+        }
     }
 
     private void UpdateStatHUD()
@@ -318,5 +341,17 @@ public class UIManager : MonoBehaviour
 
         if (gamePausedPanel != null)
             gamePausedPanel.SetActive(false);
+    }
+
+    private void ShowWaveCountdown()
+    {
+        if (waveCountdownText != null)
+            waveCountdownText.gameObject.SetActive(true);
+    }
+
+    private void HideWaveCountdown()
+    {
+        if (waveCountdownText != null)
+            waveCountdownText.gameObject.SetActive(false);
     }
 }
