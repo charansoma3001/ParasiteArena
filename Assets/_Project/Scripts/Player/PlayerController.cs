@@ -67,6 +67,8 @@ public class PlayerController : MonoBehaviour
         _rb.freezeRotation = true;
         _rb.gravityScale   = 0f;
         CurrentHealth      = maxHealth;
+        OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
+        _rb.position = new Vector2(50, 50);
     }
 
     private void Update()
@@ -245,7 +247,10 @@ public class PlayerController : MonoBehaviour
     public void SetMaxHealth(int value)
     {
         maxHealth     = value;
-        CurrentHealth = Mathf.Min(CurrentHealth, maxHealth);
+        if (!IsDead && CurrentHealth <= 0)
+            CurrentHealth = maxHealth;
+        else
+            CurrentHealth = Mathf.Min(CurrentHealth, maxHealth);
         OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
     }
 

@@ -13,7 +13,7 @@ public class RareChest : MonoBehaviour
 
     public static event System.Action<Vector2> OnChestOpened;
 
-    private SpriteRenderer renderer;
+    private new SpriteRenderer renderer;
     private BoxCollider2D solidCollider;
     private bool isOpen;
     private bool playerNearby;
@@ -57,7 +57,13 @@ public class RareChest : MonoBehaviour
         solidCollider.enabled = false;
 
         OnChestOpened?.Invoke(transform.position);
-        Debug.Log($"[RareChest] Opened at {transform.position}");
+        // Debug.Log($"[RareChest] Opened at {transform.position}");
+
+        // UIManager uiManager = FindFirstObjectByType<UIManager>();
+        // if (uiManager != null)
+        // {
+        //     uiManager.ShowMessageHUD("Rare chest opened!");
+        // }
     }
 
 #if UNITY_EDITOR

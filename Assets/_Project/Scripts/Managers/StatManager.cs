@@ -7,6 +7,7 @@ public class StatManager : MonoBehaviour
     // 1. Singleton Setup
     public static StatManager Instance { get; private set; }
     private PlayerController playerController;
+    public event System.Action OnStatsChanged;
 
     // 2. A mini-class to set up starting values in the Unity Inspector
     [System.Serializable]
@@ -85,6 +86,7 @@ public class StatManager : MonoBehaviour
         }
 
         ApplyStatsToPlayer();
+        OnStatsChanged?.Invoke();
     }
 
     private void ApplyStatsToPlayer()

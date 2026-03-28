@@ -20,11 +20,14 @@ public class WaveManager : MonoBehaviour
     public GameState CurrentState { get; private set; }
     public int CurrentWave { get; private set; } = 0;
     public float WaveTimer { get; private set; }
+    public float PrepCountdown { get; private set; } = 0f;
+    private float _prepCountdownMax = 3f; // Seconds until next wave
 
     // 2. The Events (Terry and Gagan will listen to these)
     public event Action<int> OnWaveStarted;      // Broadcasts: (WaveNumber)
     public event Action OnWaveEnded;             // Broadcasts when the timer hits 0
     public event Action<float> OnTimerChanged;   // Broadcasts every frame for the UI clock
+    public event Action<float> OnCountdownChanged; // Broadcasts countdown during prep phase
 
     private void Awake()
     {
@@ -41,12 +44,34 @@ public class WaveManager : MonoBehaviour
         // 1. Start in the Prep Phase so the game doesn't instantly spawn enemies on frame 1
         ChangeState(GameState.PrepPhase);
         
-        // 2. Give the player a 3-second breather to get their bearings, then auto-start Wave 1
-        Invoke(nameof(StartNextWave), 3f); 
+        // 2. Immediately start Wave 1 countdown (no initial delay)
+        StartNextWave();
+
+        // 3. Listen for player death
+        PlayerController.OnPlayerDied += OnPlayerDied;
+    }
+
+    private void OnPlayerDied()
+    {
+        ChangeState(GameState.GameOver);
+        Debug.Log("*** GAME OVER ***");
     }
 
     private void Update()
     {
+        // Tick the countdown during prep phase
+        if (CurrentState == GameState.PrepPhase && PrepCountdown > 0)
+        {
+            PrepCountdown -= Time.deltaTime;
+            OnCountdownChanged?.Invoke(Mathf.Max(0, PrepCountdown));
+            
+            // When countdown reaches 0, actually begin the wave
+            if (PrepCountdown <= 0)
+            {
+                BeginWave();
+            }
+        }
+        
         // Only tick the clock if a wave is actually happening
         if (CurrentState == GameState.WaveActive)
         {
@@ -68,19 +93,25 @@ public class WaveManager : MonoBehaviour
     public void StartNextWave()
     {
         if (CurrentState != GameState.PrepPhase) return;
+        if (PrepCountdown > 0) return; // Already counting down to next wave
 
-        CurrentWave++;
-        WaveTimer = timePerWave;
+        // Start the countdown to wave start
+        PrepCountdown = _prepCountdownMax;
+        OnCountdownChanged?.Invoke(PrepCountdown);
         
         // Close the shop
         if (ShopManager.Instance != null)
         {
             ShopManager.Instance.CloseShop();
         }
+    }
 
+    private void BeginWave()
+    {
+        CurrentWave++;
+        WaveTimer = timePerWave;
         ChangeState(GameState.WaveActive);
         
-        // Tell Terry's spawner to wake up!
         OnWaveStarted?.Invoke(CurrentWave);
         Debug.Log($"*** WAVE {CurrentWave} STARTED ***");
     }
@@ -88,6 +119,10 @@ public class WaveManager : MonoBehaviour
     private void EndWave()
     {
         ChangeState(GameState.PrepPhase);
+        
+        // Reset countdown so player can start next wave when ready
+        PrepCountdown = 0f;
+        OnCountdownChanged?.Invoke(0f);
         
         // Tell Terry's spawner to stop, and kill all remaining enemies
         OnWaveEnded?.Invoke(); 
