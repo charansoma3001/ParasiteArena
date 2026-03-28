@@ -57,6 +57,7 @@ public class ShopManager : MonoBehaviour
     // The Wave Manager will call this when a wave ends!
     public void OpenShop()
     {
+        Time.timeScale = 0f;
         shopPanel.SetActive(true);
         if (startNextWaveButton != null) startNextWaveButton.interactable = true;
         RollShopItems();
@@ -66,6 +67,7 @@ public class ShopManager : MonoBehaviour
     {
         shopPanel.SetActive(false);
         if (startNextWaveButton != null) startNextWaveButton.interactable = false;
+        Time.timeScale = 1f;
     }
 
     // Link this to the Start Next Wave button OnClick in the Inspector
