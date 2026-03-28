@@ -44,17 +44,8 @@ public class WaveManager : MonoBehaviour
         // 1. Start in the Prep Phase so the game doesn't instantly spawn enemies on frame 1
         ChangeState(GameState.PrepPhase);
         
-        // 2. Immediately start Wave 1 countdown (no initial delay)
-        StartNextWave();
-
-        // 3. Listen for player death
-        PlayerController.OnPlayerDied += OnPlayerDied;
-    }
-
-    private void OnPlayerDied()
-    {
-        ChangeState(GameState.GameOver);
-        Debug.Log("*** GAME OVER ***");
+        // 2. Give the player a 3-second breather to get their bearings, then auto-start Wave 1
+        Invoke(nameof(StartNextWave), 3f);
     }
 
     private void Update()
