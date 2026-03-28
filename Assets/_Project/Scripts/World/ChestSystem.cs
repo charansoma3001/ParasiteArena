@@ -88,14 +88,4 @@ public class ChestSystem : MonoBehaviour
         }
     }
 
-// --- FOR YOUR SANDBOX TESTING ---
-    private void Update()
-    {
-        // Press 'O' to simulate Gagan's player opening the chest
-        if (Input.GetKeyDown(KeyCode.O))
-        {
-            OpenChest();
-        }
-    }
-
 }
