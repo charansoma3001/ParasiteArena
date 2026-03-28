@@ -3,19 +3,15 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    [Header("Movement")]
-    public float speed = 2f;
+    public float speed { get; private set; }
+    public float dashSpeed { get; private set; }
+    public float dashDuration { get; private set; }
+    public float dashCooldown { get; private set; }
+    public int maxHealth { get; private set; }
+    public float possessionRange { get; private set; }
 
-    [Header("Dash")]
-    public float dashSpeed    = 14f;
-    public float dashDuration = 0.12f;
-    public float dashCooldown = 0.7f;
-
-    [Header("Health")]
-    public int maxHealth = 100;
-
-    [Header("Possession")]
-    public float possessionRange = 0.8f;
+    public float AttackDamage  { get; private set; }
+    public float HostDecayRate { get; private set; } = 1f;
 
     public int  CurrentHealth { get; private set; }
     public bool IsDead        { get; private set; }
@@ -66,6 +62,12 @@ public class PlayerController : MonoBehaviour
         if (_rb == null) return;
         _rb.freezeRotation = true;
         _rb.gravityScale   = 0f;
+
+        if (StatManager.Instance != null)
+        {
+            StatManager.Instance.ForceApplyStats();
+        }
+
         CurrentHealth      = maxHealth;
         OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
         _rb.position = new Vector2(50, 50);
@@ -261,6 +263,13 @@ public class PlayerController : MonoBehaviour
     {
         if (!started) OnPossessionEnd(enemy.transform.position);
     }
+
+    public void SetDashSpeed(float value) => dashSpeed = value;
+    public void SetDashDuration(float value) => dashDuration = value;
+    public void SetPossessionRange(float value) => possessionRange = value;
+    public void SetDashCooldown(float value) => dashCooldown = value;
+    public void SetAttackDamage(float value) => AttackDamage = value;
+    public void SetHostDecayRate(float value) => HostDecayRate = value;
 
     public void SetMaxHealth(int value)
     {

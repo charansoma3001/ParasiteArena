@@ -267,7 +267,7 @@ public class ExecutionerBossController : MonoBehaviour
 
         yield return new WaitForSeconds(skill1WindUp);
 
-        float dmg = _ctrl.stats.attackDamage * skill1DamageMult;
+        float dmg = _ctrl.GetActualAttackDamage() * skill1DamageMult;
         foreach (var col in Physics2D.OverlapCircleAll(transform.position, skill1Radius))
         {
             col.GetComponent<PlayerController>()?.TakeDamage(dmg);
