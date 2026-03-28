@@ -1,4 +1,5 @@
 using UnityEngine;
+
 public class PossessionSystem : MonoBehaviour
 {
     public static PossessionSystem Instance { get; private set; }
@@ -7,9 +8,9 @@ public class PossessionSystem : MonoBehaviour
     public EnemyController PossessedEnemy { get; private set; }
 
     private Transform _player;
-    private float     _bonusPossessionTime; 
+    private float     _bonusPossessionTime;
 
-    public static event System.Action<bool, EnemyController> OnPossessionChanged; 
+    public static event System.Action<bool, EnemyController> OnPossessionChanged;
 
     private void Awake()
     {
@@ -21,7 +22,7 @@ public class PossessionSystem : MonoBehaviour
     {
         var go = GameObject.FindWithTag("Player");
         if (go) _player = go.transform;
-        else Debug.LogWarning("[PossessionSystem] No object tagged 'Player' found.");
+        else Debug.LogWarning("[PossessionSystem] No 'Player' tagged object found.");
     }
 
     public bool TryPossessTarget(EnemyController target)
@@ -51,8 +52,7 @@ public class PossessionSystem : MonoBehaviour
         IsPossessing   = false;
         PossessedEnemy = null;
         released.SetState(EnemyController.EnemyState.Chasing);
-        
-        OnPossessionChanged?.Invoke(false, released); //
+        OnPossessionChanged?.Invoke(false, released);
     }
 
     public void MovePossessedEnemy(Vector2 cardinalDir)
@@ -69,7 +69,7 @@ public class PossessionSystem : MonoBehaviour
         PossessedEnemy = target;
         target.stats.possessionDuration += _bonusPossessionTime;
         target.SetState(EnemyController.EnemyState.Possessed);
-        _player?.GetComponent<PlayerController>()?.OnPossessionStart(target); 
-        OnPossessionChanged?.Invoke(true, target); 
+        _player?.GetComponent<PlayerController>()?.OnPossessionStart(target);
+        OnPossessionChanged?.Invoke(true, target);
     }
 }

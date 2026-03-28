@@ -15,7 +15,6 @@ public class PlayerController : MonoBehaviour
     public int maxHealth = 100;
 
     [Header("Possession")]
-    [Tooltip("Max world distance for E-key possession. 0.8 = ~1.5 tiles at 0.5 tile size.")]
     public float possessionRange = 0.8f;
 
     public int  CurrentHealth { get; private set; }
@@ -25,8 +24,8 @@ public class PlayerController : MonoBehaviour
     public bool IsPossessing  => PossessionSystem.Instance != null &&
                                  PossessionSystem.Instance.IsPossessing;
 
-    public static event System.Action<int, int> OnHealthChanged; 
-    public static event System.Action           OnPlayerDied;    
+    public static event System.Action<int, int> OnHealthChanged;
+    public static event System.Action           OnPlayerDied;
 
     private Rigidbody2D    _rb;
     private Animator       _anim;
@@ -37,6 +36,10 @@ public class PlayerController : MonoBehaviour
     private Vector2 _lastMoveDir = Vector2.down;
     private int     _facingDir   = 1;
     private float   _dashCooldown;
+
+    // Held-movement repeat timer for possessed enemy control
+    private float   _possessedMoveTimer;
+    private const float PossessedMoveInterval = 0.22f;
 
     private void Awake()
     {
@@ -52,12 +55,10 @@ public class PlayerController : MonoBehaviour
         _sr   = GetComponent<SpriteRenderer>() ?? GetComponentInChildren<SpriteRenderer>();
         _col  = GetComponent<Collider2D>();
 
+        // PlayerMovement.FixedUpdate sets rb.velocity every frame and overwrites
+        // the dash velocity, making Space do nothing. Disable it permanently.
         var pm = GetComponent<PlayerMovement>();
-        if (pm != null)
-        {
-            pm.enabled = false;
-            Debug.Log("[PlayerController] Disabled PlayerMovement — PlayerController handles all movement.");
-        }
+        if (pm != null) pm.enabled = false;
     }
 
     private void Start()
@@ -74,25 +75,29 @@ public class PlayerController : MonoBehaviour
 
         if (IsPossessing)
         {
+            // Track the possessed enemy every frame so the indicator and camera
+            // follow smoothly through the step animation, not just on key press.
             var possessed = PossessionSystem.Instance.PossessedEnemy;
             if (possessed != null)
                 transform.position = possessed.transform.position;
 
-            if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
-                PossessionSystem.Instance.MovePossessedEnemy(Vector2.up);
-            else if (Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow))
-                PossessionSystem.Instance.MovePossessedEnemy(Vector2.down);
-            else if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
-                PossessionSystem.Instance.MovePossessedEnemy(Vector2.left);
-            else if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
-                PossessionSystem.Instance.MovePossessedEnemy(Vector2.right);
+            // Held WASD: fires a step every PossessedMoveInterval seconds while held.
+            _possessedMoveTimer -= Time.deltaTime;
+            Vector2 heldDir = GetHeldDirection();
+            if (heldDir != Vector2.zero && _possessedMoveTimer <= 0f)
+            {
+                PossessionSystem.Instance.MovePossessedEnemy(heldDir);
+                _possessedMoveTimer = PossessedMoveInterval;
+            }
+            else if (heldDir == Vector2.zero)
+            {
+                _possessedMoveTimer = 0f;
+            }
 
             if (Input.GetKeyDown(KeyCode.Space))
                 PossessionSystem.Instance.UsePossessedAbility();
-
             if (Input.GetKeyDown(KeyCode.R))
                 PossessionSystem.Instance.UsePossessedBlock();
-
             if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Escape))
                 PossessionSystem.Instance.EndPossession();
 
@@ -119,22 +124,25 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space) && _dashCooldown <= 0f)
             StartCoroutine(DashCoroutine(_lastMoveDir));
 
-        if(Input.GetKeyDown(KeyCode.H)) // (temporary heal key for testing)
-            Heal(20);
-
-        // if(Input.GetKeyDown(KeyCode.D)) // (temporary damage key for testing)
-        //     TakeDamage(20);
-
         if (Input.GetKeyDown(KeyCode.E))
             TryPossessAdjacent();
 
-        if (Input.GetKeyDown(KeyCode.H)) Heal(20); 
+        if (Input.GetKeyDown(KeyCode.H)) Heal(20);
+    }
+
+    private Vector2 GetHeldDirection()
+    {
+        if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))    return Vector2.up;
+        if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))  return Vector2.down;
+        if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))  return Vector2.left;
+        if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) return Vector2.right;
+        return Vector2.zero;
     }
 
     private void FixedUpdate()
     {
         if (IsDead || IsPossessing || IsDashing) return;
-        _rb.velocity = _movement * speed; // Chara
+        _rb.velocity = _movement * speed;
     }
 
     private IEnumerator DashCoroutine(Vector2 dir)
@@ -161,22 +169,21 @@ public class PlayerController : MonoBehaviour
     {
         if (PossessionSystem.Instance == null)
         {
-            Debug.LogError("[PlayerController] No PossessionSystem in scene. " +
-                           "Add it to a separate empty GameObject, NOT the Player.");
+            Debug.LogError("[PlayerController] No PossessionSystem in scene.");
             return;
         }
 
         int layerIdx = LayerMask.NameToLayer("Enemy");
         if (layerIdx < 0)
         {
-            Debug.LogWarning("[PlayerController] 'Enemy' layer not found in Project Settings.");
+            Debug.LogWarning("[PlayerController] 'Enemy' layer not found.");
             return;
         }
 
         var cols = Physics2D.OverlapCircleAll(transform.position, possessionRange, 1 << layerIdx);
-
         EnemyController best    = null;
         float           closest = float.MaxValue;
+
         foreach (var col in cols)
         {
             var ec = col.GetComponent<EnemyController>();
@@ -188,17 +195,16 @@ public class PlayerController : MonoBehaviour
         if (best != null)
             PossessionSystem.Instance.TryPossessTarget(best);
         else
-            Debug.Log($"[PlayerController] No enemy in range ({possessionRange}m). " +
-                      $"Colliders on Enemy layer: {cols.Length}");
+            Debug.Log($"[PlayerController] No enemy in range ({possessionRange}m). Colliders: {cols.Length}");
     }
 
-    public void TakeDamage(float amount) // Terry
+    public void TakeDamage(float amount)
     {
         if (!CompareTag("Player")) return;
-        if (IsDead || IsInvincible)   return;
-        if (IsPossessing)             return;
+        if (IsDead || IsInvincible) return;
+        if (IsPossessing) return;
         CurrentHealth = Mathf.Max(0, CurrentHealth - Mathf.RoundToInt(amount));
-        OnHealthChanged?.Invoke(CurrentHealth, maxHealth); // Gagan
+        OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
         if (CurrentHealth <= 0) Die();
     }
 
@@ -208,17 +214,17 @@ public class PlayerController : MonoBehaviour
         IsDead       = true;
         _rb.velocity = Vector2.zero;
         SetAnimFloat("Speed", 0);
-        OnPlayerDied?.Invoke(); // Gagan
+        OnPlayerDied?.Invoke();
     }
 
     public void OnPossessionStart(EnemyController possessed)
     {
         if (_sr)  _sr.enabled  = false;
-
         if (_col) _col.enabled = false;
         _rb.velocity = Vector2.zero;
         SetAnimFloat("Speed", 0);
-        transform.position = possessed.transform.position;
+        transform.position    = possessed.transform.position;
+        _possessedMoveTimer   = 0f;
     }
 
     public void OnPossessionEnd(Vector3 returnPos)
@@ -236,16 +242,16 @@ public class PlayerController : MonoBehaviour
         if (!started) OnPossessionEnd(enemy.transform.position);
     }
 
-    public void SetMaxHealth(int value) // Charan 
+    public void SetMaxHealth(int value)
     {
         maxHealth     = value;
         CurrentHealth = Mathf.Min(CurrentHealth, maxHealth);
         OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
     }
 
-    public void SetSpeed(float value) => speed = value; // Charan 
+    public void SetSpeed(float value) => speed = value;
 
-    public void Heal(int amount) // Charan
+    public void Heal(int amount)
     {
         if (IsDead) return;
         CurrentHealth = Mathf.Min(maxHealth, CurrentHealth + amount);

@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class EnemyAnimator : MonoBehaviour
 {
-    [Header("State Names — must match exactly what is in your Animator Controller")]
+    [Header("State Names — match exactly what is in your Animator Controller")]
     public string idleState   = "IdleNormal";
     public string walkState   = "Walk";
     public string attackState = "Attack1";

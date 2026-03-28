@@ -11,7 +11,6 @@ public class EnemyAI : MonoBehaviour
     public float stepCooldown = 0.35f;
 
     [Header("Archer")]
-    public int archerShootRange   = 6;
     public int archerKiteDistance = 3;
 
     [Header("Pathfinding")]
@@ -33,6 +32,11 @@ public class EnemyAI : MonoBehaviour
     private float _spawnTimer;
     private int   _activeSpawnCount;
 
+    private Vector2 _spawnPos;
+    private bool    _ratAlerted;
+    private float   _ratAlertTimer;
+    private bool    _ratReturning;
+
     public Vector2 FacingDirection { get; private set; } = Vector2.down;
     public bool    IsMoving        => _isStepping;
 
@@ -51,6 +55,8 @@ public class EnemyAI : MonoBehaviour
     private void Start()
     {
         SnapToGrid();
+        _spawnPos = _rb.position;
+
         switch (_stats.enemyType)
         {
             case EnemyStats.EnemyType.Chomp:
@@ -78,10 +84,32 @@ public class EnemyAI : MonoBehaviour
             case EnemyStats.EnemyType.Chomp:   UpdateChomp();   return;
             case EnemyStats.EnemyType.Spawner: UpdateSpawner(); return;
             case EnemyStats.EnemyType.Archer:  UpdateArcher();  return;
+            case EnemyStats.EnemyType.Rat:     UpdateRat();     return;
         }
         UpdateHunter();
     }
 
+    // ---------------------------------------------------------------
+    // FIX (infinite pushback):
+    // All movement in this game uses MovePosition, but the Rigidbody2D
+    // is Dynamic, so physics collision responses still write a velocity
+    // that persists until someone zeroes it. Between steps nobody did,
+    // so a single bump could send an entity sliding forever.
+    //
+    // Solution: every FixedUpdate frame, if we are NOT currently running
+    // a step animation, force velocity to zero. This is safe because
+    // intentional movement is driven entirely by MovePosition; velocity
+    // is never the intended locomotion mechanism for enemies.
+    // ---------------------------------------------------------------
+    private void FixedUpdate()
+    {
+        if (_ctrl.IsDead) return;
+        if (!_isStepping)
+            _rb.velocity = Vector2.zero;
+    }
+
+    // PlayerController.Update copies transform.position to possessed enemy every frame,
+    // so _player.position always equals the effective target automatically.
     private Vector3 GetTargetPosition() =>
         _player != null ? _player.position : transform.position;
 
@@ -132,7 +160,7 @@ public class EnemyAI : MonoBehaviour
 
         float tilesDist = TilesFrom(target);
         bool  aligned   = IsCardinalAligned(target);
-        bool  inRange   = tilesDist <= archerShootRange;
+        bool  inRange   = tilesDist <= _stats.arrowRange;
 
         if (aligned && inRange && tilesDist > 0)
         {
@@ -151,6 +179,73 @@ public class EnemyAI : MonoBehaviour
 
         Vector2 strafe = StrafeToAlign(target);
         if (strafe != Vector2.zero) StartCoroutine(TakeStep(strafe));
+    }
+
+    // Rat AI: idle at spawn until player in range, then alert delay, then chase.
+    // If player leaves range at any point, returns to spawn and goes idle.
+    private void UpdateRat()
+    {
+        if (_player == null) return;
+        float dist    = Vector2.Distance(transform.position, _player.position);
+        bool  inRange = dist <= _stats.detectionRange;
+
+        if (_ctrl.CurrentState == EnemyController.EnemyState.Idle)
+        {
+            if (inRange)
+            {
+                _ratReturning  = false;
+                _ratAlerted    = false;
+                _ratAlertTimer = _stats.alertDelay;
+                _ctrl.SetState(EnemyController.EnemyState.Chasing);
+            }
+            return;
+        }
+
+        if (_ctrl.CurrentState == EnemyController.EnemyState.Chasing)
+        {
+            if (!inRange)
+            {
+                _ratReturning = true;
+            }
+
+            if (_ratReturning)
+            {
+                float distToSpawn = Vector2.Distance(transform.position, _spawnPos);
+                if (distToSpawn <= tileSize * 0.6f)
+                {
+                    _ratReturning = false;
+                    _ctrl.SetState(EnemyController.EnemyState.Idle);
+                    return;
+                }
+                if (!_isStepping && _stepCooldownTimer <= 0f)
+                {
+                    Vector2 step = BestStepToward(_spawnPos);
+                    if (step != Vector2.zero) StartCoroutine(TakeStep(step));
+                }
+                return;
+            }
+
+            if (!_ratAlerted)
+            {
+                _ratAlertTimer -= Time.deltaTime;
+                if (_ratAlertTimer <= 0f) _ratAlerted = true;
+                return;
+            }
+
+            float tilesDist = TilesFrom(_player.position);
+            if (tilesDist <= _stats.attackRange)
+            {
+                FacingDirection = CardinalDir(_player.position - transform.position);
+                _ctrl.TriggerAttack();
+                return;
+            }
+
+            if (!_isStepping && _stepCooldownTimer <= 0f)
+            {
+                Vector2 step = BestStepToward(_player.position);
+                if (step != Vector2.zero) StartCoroutine(TakeStep(step));
+            }
+        }
     }
 
     private bool IsCardinalAligned(Vector3 target)
@@ -190,6 +285,7 @@ public class EnemyAI : MonoBehaviour
     public void BeginRoam()
     {
         StopAllCoroutines();
+        if (_stats.enemyType == EnemyStats.EnemyType.Rat) return;
         StartCoroutine(RoamCoroutine());
     }
 
@@ -230,7 +326,7 @@ public class EnemyAI : MonoBehaviour
         var go   = Instantiate(_stats.spawnPrefab,
                                SnapPos(transform.position + (Vector3)offset), Quaternion.identity);
         var ctrl = go.GetComponent<EnemyController>();
-        ctrl?.Init(); // Weihan
+        ctrl?.Init();
         _activeSpawnCount++;
         EnemyController.OnEnemyDied += OnChildDied;
         void OnChildDied(EnemyController dead)
@@ -252,6 +348,10 @@ public class EnemyAI : MonoBehaviour
         FacingDirection    = dir;
         FlipSprite(dir);
 
+        // FIX (pushback): clear any residual physics velocity before we
+        // start the MovePosition lerp so the two don't fight each other.
+        _rb.velocity = Vector2.zero;
+
         Vector2 start   = _rb.position;
         Vector2 end     = SnapPos(start + dir * tileSize);
         float   elapsed = 0f;
@@ -259,12 +359,18 @@ public class EnemyAI : MonoBehaviour
         while (elapsed < stepDuration)
         {
             elapsed += Time.fixedDeltaTime;
+            // FIX (pushback): re-zero every physics tick. A collision during
+            // the lerp deposits a reaction velocity; suppressing it here
+            // keeps the step animation clean and prevents the entity from
+            // being deflected sideways by another body.
+            _rb.velocity = Vector2.zero;
             _rb.MovePosition(Vector2.Lerp(start, end, Mathf.Clamp01(elapsed / stepDuration)));
             yield return new WaitForFixedUpdate();
         }
 
         _rb.MovePosition(end);
-        _isStepping = false;
+        _rb.velocity = Vector2.zero; // guarantee a clean stop at tile boundary
+        _isStepping  = false;
     }
 
     public void BeginChase()
@@ -285,11 +391,6 @@ public class EnemyAI : MonoBehaviour
     {
         if (_isStepping) return;
         StartCoroutine(TakeStep(CardinalDir(input)));
-    }
-
-    public void SetFacingDirection(Vector2 dir)
-    {
-        if (dir != Vector2.zero) FacingDirection = CardinalDir(dir);
     }
 
     public EnemyController.EnemyState GetResumeState()
