@@ -8,7 +8,10 @@ public class PossessionSystem : MonoBehaviour
     public EnemyController PossessedEnemy { get; private set; }
 
     private Transform _player;
-    private float     _bonusPossessionTime;
+
+    public float BonusPossessionTime { get; private set; }
+    public float HostDecayRate       { get; private set; } = 1f;
+    public float PlayerAttackDamage  { get; private set; }
 
     public static event System.Action<bool, EnemyController> OnPossessionChanged;
 
@@ -61,13 +64,14 @@ public class PossessionSystem : MonoBehaviour
         PossessedEnemy.GetComponent<EnemyAI>()?.StepInDirection(cardinalDir);
     }
 
-    public void SetPossessionBonusTime(float bonus) => _bonusPossessionTime = bonus;
+    public void SetPossessionBonusTime(float bonus) => BonusPossessionTime = bonus;
+    public void SetHostDecayRate(float rate) => HostDecayRate = rate;
+    public void SetPlayerAttackDamage(float dmg) => PlayerAttackDamage = dmg;
 
     private void BeginPossession(EnemyController target)
     {
         IsPossessing   = true;
         PossessedEnemy = target;
-        target.stats.possessionDuration += _bonusPossessionTime;
         target.SetState(EnemyController.EnemyState.Possessed);
         _player?.GetComponent<PlayerController>()?.OnPossessionStart(target);
         OnPossessionChanged?.Invoke(true, target);

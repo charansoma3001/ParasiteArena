@@ -315,7 +315,7 @@ public class EnemyAI : MonoBehaviour
         }
         StartCoroutine(TakeStep(_chompDir));
         if (_player != null && Vector2.Distance(transform.position, _player.position) < tileSize * 0.8f)
-            _player.GetComponent<PlayerController>()?.TakeDamage(_stats.attackDamage);
+            _player.GetComponent<PlayerController>()?.TakeDamage(_ctrl.GetActualAttackDamage());
     }
 
     private void UpdateSpawner()

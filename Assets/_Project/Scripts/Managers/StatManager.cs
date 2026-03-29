@@ -89,21 +89,45 @@ public class StatManager : MonoBehaviour
         OnStatsChanged?.Invoke();
     }
 
+    public void ForceApplyStats()
+    {
+        ApplyStatsToPlayer();
+    }
+
+    private float GetStatOr(StatType stat, float fallback)
+    {
+        return currentStats.ContainsKey(stat) ? currentStats[stat] : fallback;
+    }
+
     private void ApplyStatsToPlayer()
     {
         if (playerController == null)
         {
-            playerController = FindObjectOfType<PlayerController>();
+            playerController = FindFirstObjectByType<PlayerController>();
         }
 
-        if (playerController == null)
+        if (playerController != null)
+        {
+            playerController.SetMaxHealth((int)GetStatOr(StatType.MaxHealth, 100f));
+            playerController.SetSpeed(GetStatOr(StatType.MovementSpeed, 5f));
+            playerController.SetDashCooldown(GetStatOr(StatType.DashCooldown, 0.7f));
+            playerController.SetDashSpeed(GetStatOr(StatType.DashSpeed, 14f));
+            playerController.SetDashDuration(GetStatOr(StatType.DashDuration, 0.12f));
+            playerController.SetPossessionRange(GetStatOr(StatType.PossessionRange, 0.8f));
+            playerController.SetAttackDamage(GetStatOr(StatType.AttackDamage, 0f));
+            playerController.SetHostDecayRate(GetStatOr(StatType.HostDecayRate, 1f));
+        }
+        else
         {
             Debug.LogWarning("StatManager couldn't find PlayerController to apply stats.");
-            return;
         }
 
-        playerController.SetMaxHealth((int)(currentStats.ContainsKey(StatType.MaxHealth) ? currentStats[StatType.MaxHealth] : 100f));
-        playerController.SetSpeed(currentStats.ContainsKey(StatType.MovementSpeed) ? currentStats[StatType.MovementSpeed] : 5f);
+        if (PossessionSystem.Instance != null)
+        {
+            PossessionSystem.Instance.SetPossessionBonusTime(GetStatOr(StatType.PossessionDuration, 0f));
+            PossessionSystem.Instance.SetHostDecayRate(GetStatOr(StatType.HostDecayRate, 1f));
+            PossessionSystem.Instance.SetPlayerAttackDamage(GetStatOr(StatType.AttackDamage, 0f));
+        }
     }
 
     // --- HOW THE REST OF THE TEAM GETS THE STATS ---
