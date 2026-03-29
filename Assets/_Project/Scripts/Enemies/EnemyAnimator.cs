@@ -11,9 +11,14 @@ public class EnemyAnimator : MonoBehaviour
     public string blockState  = "Block!";
 
     private Animator _anim;
+    private SpriteRenderer _spriteRenderer;
     private string   _current;
 
-    private void Awake() => _anim = GetComponent<Animator>();
+    private void Awake()
+    {
+        _anim = GetComponent<Animator>();
+        _spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+    }
 
     public void Play(string state)
     {
@@ -38,5 +43,12 @@ public class EnemyAnimator : MonoBehaviour
             _current == deathState  || _current == blockState) return;
         if (isMoving) PlayWalk();
         else          PlayIdle();
+    }
+
+    public void SetFacing(Vector2 dir)
+    {
+        if (_spriteRenderer == null) return;
+        if      (dir.x > 0.1f)  _spriteRenderer.flipX = false;
+        else if (dir.x < -0.1f) _spriteRenderer.flipX = true;
     }
 }
