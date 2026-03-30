@@ -5,8 +5,8 @@ using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
-    public string mainMenuScene = "MainMenu";
-    public string gameScene = "Game";
+    public string mainMenuScene = "01_MainMenu";
+    public string gameScene = "Sandbox_Charan";
 
     // PLAY BUTTON
     public void PlayGame()

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class AudioManager : MonoBehaviour
 {
@@ -31,6 +32,29 @@ public class AudioManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
+    }
+    
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // When a new scene loads, check if we should play/restart background music.
+        // This handles cases like restarting after death or playing from the main menu.
+        if (backgroundMusic != null)
+        {
+            if (musicSource != null && !musicSource.isPlaying)
+            {
+                PlayMusic(backgroundMusic);
+            }
+        }
     }
 
     private void Start()
