@@ -32,7 +32,6 @@ public class EnemyHealthBar : MonoBehaviour
 
         _ownerSprite = owner.GetComponentInChildren<SpriteRenderer>();
 
-        // Parent directly to enemy so local offset tracks enemy movement.
         transform.SetParent(owner.transform, false);
         transform.localPosition = _offset;
         transform.localRotation = Quaternion.identity;

@@ -87,9 +87,6 @@ public class EnemySpawner : MonoBehaviour
         go.GetComponent<EnemyController>()?.Init();
     }
 
-    // Spawns at a random angle, at a player-relative radius.
-    // This keeps enemies a consistent walking distance away regardless
-    // of camera size or zoom level, so they reach the player quickly.
     private Vector2 GetSpawnPosition()
     {
         Vector2 origin = _player != null

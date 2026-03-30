@@ -3,7 +3,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "NewEnemyStats", menuName = "Game/Enemy Stats")]
 public class EnemyStats : ScriptableObject
 {
-    public enum EnemyType { Warrior, Swordsman, Archer, Tank, Mage, Chomp, Rat, Spawner, Boss }
+    public enum EnemyType {Swordsman, Archer, Chomp, Rat, Spawner, Boss }
 
     [Header("Identity")]
     public EnemyType enemyType;
@@ -25,21 +25,13 @@ public class EnemyStats : ScriptableObject
     public float possessionDuration           = 8f;
     public float perfectDodgePossessionWindow = 1.2f;
 
-    [Header("Attack Shape - Warrior / Swordsman")]
+    [Header("Attack Shape - Swordsman")]
     public float swordArcAngle  = 90f;
     public float swordArcRadius = 2.5f;
 
     [Header("Attack Shape - Archer")]
     public float arrowSpeed  = 12f;
     public int   arrowRange  = 6;
-
-    [Header("Attack Shape - Mage")]
-    public float meteorRadius = 3f;
-    public float meteorDelay  = 1.5f;
-
-    [Header("Attack Shape - Tank")]
-    public float bashDistance = 4f;
-    public float bashDamage   = 20f;
 
     [Header("Rat")]
     [Tooltip("Seconds the rat waits after spotting the player before charging.")]

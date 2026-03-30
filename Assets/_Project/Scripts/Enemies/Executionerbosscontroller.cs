@@ -23,12 +23,12 @@ public class ExecutionerBossController : MonoBehaviour
 
    
     [Header("Summoning")]
-    [Tooltip("Prefab for the spirit minion (should carry its own EnemyController + EnemyAI).")]
+    [Tooltip("Prefab for the spirit minion.")]
     public GameObject spiritPrefab;
     [Tooltip("How many spirits to spawn per summon event.")]
     public int spiritsPerSummon = 2;
     [Tooltip("Max spirits alive at once - boss won't summon beyond this.")]
-    public int maxSpirits = 4;
+    public int maxSpirits = 10;
 
     [Tooltip("Seconds between summon events in Phase 1.")]
     public float summonIntervalP1 = 14f;

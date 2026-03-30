@@ -114,17 +114,12 @@ public class EnemyController : MonoBehaviour
                 ClearActiveTiles();
                 _atkCooldown = 0f;
                 _ai.StopMovement();
-                // Reset the animator immediately — if the enemy was mid-attack
-                // (e.g. an archer drawing its bow), StopAllCoroutines kills the
-                // C# coroutine but the Animator stays on the Attack1 state.
                 _anim?.PlayIdle();
                 _possessionTimer = stats.possessionDuration + (PossessionSystem.Instance != null ? PossessionSystem.Instance.BonusPossessionTime : 0f);
                 if (possessedIndicatorPrefab)
                 {
                     _possessedIndicator = Instantiate(possessedIndicatorPrefab,
                                                       transform.position, Quaternion.identity, transform);
-                    // Offset the indicator upward by 2.5 tiles so it floats clearly
-                    // above the enemy sprite rather than sitting on top of it.
                     _possessedIndicator.transform.localPosition = Vector3.up * (tileSize * 2.5f);
                 }
                 OnPossessionStart?.Invoke(this);
@@ -196,18 +191,11 @@ public class EnemyController : MonoBehaviour
     {
         switch (type)
         {
-            case EnemyStats.EnemyType.Warrior:
             case EnemyStats.EnemyType.Swordsman:
                 yield return StartCoroutine(SwordAttack());
                 break;
             case EnemyStats.EnemyType.Archer:
                 yield return StartCoroutine(ArcherAttack());
-                break;
-            case EnemyStats.EnemyType.Tank:
-                yield return StartCoroutine(TankAttack());
-                break;
-            case EnemyStats.EnemyType.Mage:
-                yield return StartCoroutine(MageAttack());
                 break;
             case EnemyStats.EnemyType.Rat:
             case EnemyStats.EnemyType.Chomp:
@@ -238,9 +226,6 @@ public class EnemyController : MonoBehaviour
 
         yield return new WaitForSeconds(0.4f);
 
-        // Collect unique targets across all three zones before dealing any damage.
-        // Without deduplication a target whose collider overlaps two zones
-        // would be hit twice in the same swing — effectively doubling the damage.
         var hitSet = new HashSet<Collider2D>();
         foreach (var pos in new[] { centre, left, right })
             foreach (var h in Physics2D.OverlapBoxAll(pos, Vector2.one * tileSize * 0.85f, 0f))
@@ -295,62 +280,6 @@ public class EnemyController : MonoBehaviour
         _anim?.PlayIdle();
     }
 
-    private IEnumerator TankAttack()
-    {
-        _anim?.PlayAttack();
-        Vector2 dir      = _ai.FacingDirection;
-        float   elapsed  = 0f;
-        float   bashTime = 0.3f;
-        float   spd      = (stats.bashDistance * tileSize) / bashTime;
-
-        var tile = SpawnTile(transform.position + (Vector3)(dir * tileSize), tileSize);
-        AttackTileActive = true;
-
-        var rb = GetComponent<Rigidbody2D>();
-        // Track targets already hit this bash — without this the overlap runs
-        // every Update frame for the 0.3 s window, dealing damage ~18× at 60 fps.
-        var bashedTargets = new HashSet<Collider2D>();
-        while (elapsed < bashTime)
-        {
-            rb.velocity = Vector2.zero;
-            rb.MovePosition(rb.position + dir * spd * Time.fixedDeltaTime);
-            elapsed += Time.deltaTime;
-            foreach (var h in Physics2D.OverlapCircleAll(transform.position, tileSize * 0.4f))
-            {
-                if (bashedTargets.Add(h))          // Add returns false if already present
-                {
-                    float dmg = GetActualAttackDamage(stats.bashDamage);
-                    HitTarget(h, dmg, dmg);
-                }
-            }
-            yield return null;
-        }
-
-        rb.velocity = Vector2.zero; 
-        if (tile) Destroy(tile);
-        AttackTileActive = false;
-        _anim?.PlayIdle();
-    }
-
-    private IEnumerator MageAttack()
-    {
-        _anim?.PlayAttack();
-        var player = GameObject.FindWithTag("Player");
-        if (player == null) yield break;
-
-        Vector3 targetPos = SnapToTile(player.transform.position);
-        var tile = SpawnTile(targetPos, stats.meteorRadius * tileSize);
-        AttackTileActive = true;
-        yield return new WaitForSeconds(stats.meteorDelay);
-
-        foreach (var h in Physics2D.OverlapCircleAll(targetPos, stats.meteorRadius * tileSize))
-            HitTarget(h, GetActualAttackDamage(), GetActualAttackDamage());
-
-        if (tile) Destroy(tile);
-        AttackTileActive = false;
-        _anim?.PlayIdle();
-    }
-
     private IEnumerator BiteAttack()
     {
         _anim?.PlayAttack();
@@ -369,7 +298,6 @@ public class EnemyController : MonoBehaviour
         _anim?.PlayIdle();
     }
 
-
     private IEnumerator BossComboAttack()
     {
         _anim?.PlayAttack();
@@ -382,7 +310,6 @@ public class EnemyController : MonoBehaviour
         AttackTileActive = true;
         yield return new WaitForSeconds(0.2f);
 
-        // Beat 1 — single zone, no deduplication needed, but use a set for consistency.
         float dmg1 = GetActualAttackDamage();
         foreach (var h in Physics2D.OverlapBoxAll(
             transform.position + (Vector3)(fwd * tileSize * 1.5f),
@@ -397,8 +324,7 @@ public class EnemyController : MonoBehaviour
         var t4 = SpawnTile(transform.position - (Vector3)(perp  * tileSize), tileSize);
         yield return new WaitForSeconds(0.2f);
 
-        // Beat 2 — three overlapping zones: deduplicate so a target in the
-        // corner between two zones only takes damage once.
+
         var beat2Set = new HashSet<Collider2D>();
         foreach (var p in new[]
         {
@@ -421,12 +347,6 @@ public class EnemyController : MonoBehaviour
     }
 
 
-    // playerDmg  — damage dealt to PlayerController.  May include PlayerAttackDamage
-    //              for future direct-attack mechanics.  Ignored during possession
-    //              because PlayerController.TakeDamage() returns early while possessing.
-    // enemyDmg   — damage dealt to EnemyController targets.
-    //              Now configured to receive the same buffed damage as playerDmg so 
-    //              possession actually turns enemies into powerhouses.
     private void HitTarget(Collider2D h, float playerDmg, float enemyDmg)
     {
         if (h == null) return;
@@ -512,8 +432,8 @@ public class ArrowProjectile : MonoBehaviour
 {
     private Vector2    _dir;
     private float      _speed;
-    private float      _damage;       // damage vs the player
-    private float      _enemyDamage;  // damage vs other enemies (base stats, no player bonus)
+    private float      _damage;   
+    private float      _enemyDamage; 
     private GameObject _owner;
     private bool       _ready;
     private bool       _firedByPossessed;
