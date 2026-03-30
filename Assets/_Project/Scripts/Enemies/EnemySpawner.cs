@@ -8,21 +8,20 @@ public class EnemySpawner : MonoBehaviour
 
     [Header("Wave Spawn Settings")]
     [Tooltip("Total enemies spawned per wave.")]
-    public int   enemiesPerWave = 5;
+    public int enemiesPerWave = 5;
     [Tooltip("Seconds between individual spawns.")]
     public float spawnInterval  = 1f;
 
-    [Header("Spawn Radius (player-relative)")]
-    [Tooltip("Enemies spawn at least this far from the player (world units). " +
-             "Keep above your camera half-height so they appear off-screen.")]
+    [Header("Spawn Radius")]
+    [Tooltip("Enemies spawn at least this far from the player . ")]
     public float spawnRadiusMin = 6f;
     [Tooltip("Enemies spawn at most this far from the player.")]
     public float spawnRadiusMax = 9f;
 
     private Transform _player;
-    private float     _timer;
-    private bool      _spawning;
-    private int       _spawnedThisWave;
+    private float _timer;
+    private bool _spawning;
+    private int _spawnedThisWave;
 
     private void Start()
     {
@@ -41,14 +40,14 @@ public class EnemySpawner : MonoBehaviour
         if (WaveManager.Instance != null)
         {
             WaveManager.Instance.OnWaveStarted -= OnWaveStarted;
-            WaveManager.Instance.OnWaveEnded   -= OnWaveEnded;
+            WaveManager.Instance.OnWaveEnded -= OnWaveEnded;
         }
     }
 
     private void OnWaveStarted(int waveNumber)
     {
-        _spawning        = true;
-        _timer           = 0f;
+        _spawning = true;
+        _timer = 0f;
         _spawnedThisWave = 0;
         Debug.Log($"[EnemySpawner] Wave {waveNumber} — spawning {enemiesPerWave} enemies.");
     }

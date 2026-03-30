@@ -6,20 +6,20 @@ using UnityEngine;
 public class ExecutionerBossController : MonoBehaviour
 {
     [Header("HP Thresholds (fraction of max HP)")]
-    [Tooltip("Phase 2 begins below this fraction - boss gets faster and summons more.")]
+    [Tooltip("Phase 2")]
     public float phase2Threshold = 0.60f;
-    [Tooltip("Phase 3 begins below this fraction - Skill1 spam, constant summoning.")]
+    [Tooltip("Phase 3")]
     public float phase3Threshold = 0.30f;
 
-    [Header("Phase 2 - Enraged")]
-    public float p2StepDurationMult    = 0.80f;
-    public float p2StepCooldownMult    = 0.80f;
-    public float p2AttackCooldownMult  = 0.75f;
+    [Header("Phase 2")]
+    public float p2StepDurationMult = 0.80f;
+    public float p2StepCooldownMult = 0.80f;
+    public float p2AttackCooldownMult = 0.75f;
 
-    [Header("Phase 3 - Berserk")]
-    public float p3StepDurationMult    = 0.60f;
-    public float p3StepCooldownMult    = 0.60f;
-    public float p3AttackCooldownMult  = 0.50f;
+    [Header("Phase 3")]
+    public float p3StepDurationMult = 0.60f;
+    public float p3StepCooldownMult = 0.60f;
+    public float p3AttackCooldownMult = 0.50f;
 
    
     [Header("Summoning")]
@@ -27,7 +27,7 @@ public class ExecutionerBossController : MonoBehaviour
     public GameObject spiritPrefab;
     [Tooltip("How many spirits to spawn per summon event.")]
     public int spiritsPerSummon = 2;
-    [Tooltip("Max spirits alive at once - boss won't summon beyond this.")]
+    [Tooltip("Max spirits alive at once")]
     public int maxSpirits = 10;
 
     [Tooltip("Seconds between summon events in Phase 1.")]
@@ -41,32 +41,32 @@ public class ExecutionerBossController : MonoBehaviour
     public float summonAnimDuration = 0.9f;
 
  
-    [Header("Skill1 - Scythe Slam")]
+    [Header("Skill1")]
     [Tooltip("Seconds between Skill1 uses in Phase 2.")]
     public float skill1IntervalP2 = 12f;
     [Tooltip("Seconds between Skill1 uses in Phase 3.")]
     public float skill1IntervalP3 = 6f;
 
-    [Tooltip("Radius of the slam hit (in world units).")]
+    [Tooltip("Radius of the slam hit.")]
     public float skill1Radius = 1.4f;
     [Tooltip("Damage multiplier on top of stats.attackDamage.")]
     public float skill1DamageMult = 1.8f;
-    [Tooltip("Wind-up seconds before the hit lands.")]
+    [Tooltip("before the hit lands.")]
     public float skill1WindUp = 0.55f;
 
-    [Tooltip("Optional danger-tile prefab shown during wind-up.")]
+    [Tooltip("tile prefab")]
     public GameObject skill1TilePrefab;
 
     [Header("Phase Transition")]
     public AudioClip phaseTransitionSfx;
-    public float      transitionStunDuration = 1.2f;
+    public float transitionStunDuration = 1.2f;
 
    
     public int CurrentPhase { get; private set; } = 1;
 
     private EnemyController _ctrl;
-    private EnemyAI         _ai;
-    private EnemyAnimator   _anim;
+    private EnemyAI _ai;
+    private EnemyAnimator  _anim;
 
     private float _baseStepDuration;
     private float _baseStepCooldown;

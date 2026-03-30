@@ -6,7 +6,7 @@ using UnityEngine;
 public class EnemyAI : MonoBehaviour
 {
     [Header("Tile Movement")]
-    public float tileSize     = 0.5f;
+    public float tileSize = 0.5f;
     public float stepDuration = 0.18f;
     public float stepCooldown = 0.35f;
 
@@ -17,37 +17,37 @@ public class EnemyAI : MonoBehaviour
     public LayerMask obstacleLayer;
 
     private EnemyController _ctrl;
-    private Rigidbody2D     _rb;
-    private EnemyStats      _stats;
-    private Transform       _player;
-    private EnemyAnimator   _anim;
+    private Rigidbody2D _rb;
+    private EnemyStats _stats;
+    private Transform _player;
+    private EnemyAnimator _anim;
 
-    private bool  _isStepping;
+    private bool _isStepping;
     private float _stepCooldownTimer;
 
     private Vector2 _chompDir;
-    private float   _chompBounceTimer;
+    private float _chompBounceTimer;
     private const float ChompBounceInterval = 1.8f;
 
     private float _spawnTimer;
-    private int   _activeSpawnCount;
+    private int _activeSpawnCount;
 
     private Vector2 _spawnPos;
-    private bool    _ratAlerted;
-    private float   _ratAlertTimer;
-    private bool    _ratReturning;
+    private bool _ratAlerted;
+    private float _ratAlertTimer;
+    private bool _ratReturning;
 
     public Vector2 FacingDirection { get; private set; } = Vector2.down;
-    public bool    IsMoving        => _isStepping;
+    public bool IsMoving => _isStepping;
 
     private void Awake()
     {
         _ctrl = GetComponent<EnemyController>();
-        _rb   = GetComponent<Rigidbody2D>();
+        _rb = GetComponent<Rigidbody2D>();
         _rb.freezeRotation = true;
-        _rb.gravityScale   = 0f;
+        _rb.gravityScale = 0f;
         _stats = _ctrl.stats;
-        _anim  = GetComponentInChildren<EnemyAnimator>();
+        _anim = GetComponentInChildren<EnemyAnimator>();
         var p = GameObject.FindWithTag("Player");
         if (p) _player = p.transform;
     }
@@ -60,7 +60,7 @@ public class EnemyAI : MonoBehaviour
         switch (_stats.enemyType)
         {
             case EnemyStats.EnemyType.Chomp:
-                _chompDir         = CardinalDir(Random.insideUnitCircle);
+                _chompDir = CardinalDir(Random.insideUnitCircle);
                 _chompBounceTimer = ChompBounceInterval;
                 _ctrl.SetState(EnemyController.EnemyState.Roaming);
                 break;
@@ -81,10 +81,10 @@ public class EnemyAI : MonoBehaviour
 
         switch (_stats.enemyType)
         {
-            case EnemyStats.EnemyType.Chomp:   UpdateChomp();   return;
+            case EnemyStats.EnemyType.Chomp: UpdateChomp(); return;
             case EnemyStats.EnemyType.Spawner: UpdateSpawner(); return;
-            case EnemyStats.EnemyType.Archer:  UpdateArcher();  return;
-            case EnemyStats.EnemyType.Rat:     UpdateRat();     return;
+            case EnemyStats.EnemyType.Archer: UpdateArcher(); return;
+            case EnemyStats.EnemyType.Rat: UpdateRat(); return;
         }
         UpdateHunter();
     }
@@ -104,7 +104,7 @@ public class EnemyAI : MonoBehaviour
     private void UpdateHunter()
     {
         Vector3 target = GetTargetPosition();
-        float   dist   = Vector2.Distance(transform.position, target);
+        float dist = Vector2.Distance(transform.position, target);
 
         if (_ctrl.CurrentState == EnemyController.EnemyState.Idle ||
             _ctrl.CurrentState == EnemyController.EnemyState.Roaming)
@@ -133,7 +133,7 @@ public class EnemyAI : MonoBehaviour
     private void UpdateArcher()
     {
         Vector3 target = GetTargetPosition();
-        float   dist   = Vector2.Distance(transform.position, target);
+        float dist = Vector2.Distance(transform.position, target);
 
         if (_ctrl.CurrentState == EnemyController.EnemyState.Idle ||
             _ctrl.CurrentState == EnemyController.EnemyState.Roaming)
@@ -146,8 +146,8 @@ public class EnemyAI : MonoBehaviour
         if (_ctrl.CurrentState == EnemyController.EnemyState.Attacking) return;
 
         float tilesDist = TilesFrom(target);
-        bool  aligned   = IsCardinalAligned(target);
-        bool  inRange   = tilesDist <= _stats.arrowRange;
+        bool aligned = IsCardinalAligned(target);
+        bool inRange = tilesDist <= _stats.arrowRange;
 
         if (aligned && inRange && tilesDist > 0)
         {
@@ -172,15 +172,15 @@ public class EnemyAI : MonoBehaviour
     private void UpdateRat()
     {
         if (_player == null) return;
-        float dist    = Vector2.Distance(transform.position, _player.position);
-        bool  inRange = dist <= _stats.detectionRange;
+        float dist = Vector2.Distance(transform.position, _player.position);
+        bool inRange = dist <= _stats.detectionRange;
 
         if (_ctrl.CurrentState == EnemyController.EnemyState.Idle)
         {
             if (inRange)
             {
-                _ratReturning  = false;
-                _ratAlerted    = false;
+                _ratReturning = false;
+                _ratAlerted = false;
                 _ratAlertTimer = _stats.alertDelay;
                 _ctrl.SetState(EnemyController.EnemyState.Chasing);
             }
@@ -238,7 +238,7 @@ public class EnemyAI : MonoBehaviour
     private bool IsCardinalAligned(Vector3 target)
     {
         Vector2 mine = SnapPos(transform.position);
-        Vector2 tgt  = SnapPos(target);
+        Vector2 tgt = SnapPos(target);
         return Mathf.Approximately(mine.x, tgt.x) || Mathf.Approximately(mine.y, tgt.y);
     }
 
@@ -246,8 +246,8 @@ public class EnemyAI : MonoBehaviour
     {
         Vector2 mine = SnapPos(transform.position);
         Vector2 tgt  = SnapPos(target);
-        float   dx   = tgt.x - mine.x;
-        float   dy   = tgt.y - mine.y;
+        float dx = tgt.x - mine.x;
+        float dy = tgt.y - mine.y;
 
         if (Mathf.Abs(dx) < 0.01f && Mathf.Abs(dy) < 0.01f) return Vector2.zero;
 
@@ -255,12 +255,12 @@ public class EnemyAI : MonoBehaviour
         Vector2 v = new Vector2(0f, Mathf.Sign(dy));
 
         Vector2 primary, secondary;
-        if      (Mathf.Abs(dx) < 0.01f) { primary = v; secondary = h; }
+        if (Mathf.Abs(dx) < 0.01f) { primary = v; secondary = h; }
         else if (Mathf.Abs(dy) < 0.01f) { primary = h; secondary = v; }
         else
         {
             bool colFirst = Mathf.Abs(dx) <= Mathf.Abs(dy);
-            primary   = colFirst ? h : v;
+            primary = colFirst ? h : v;
             secondary = colFirst ? v : h;
         }
 
@@ -281,7 +281,7 @@ public class EnemyAI : MonoBehaviour
         while (true)
         {
             Vector2[] dirs = { Vector2.up, Vector2.down, Vector2.left, Vector2.right };
-            Vector2   dir  = dirs[Random.Range(0, dirs.Length)];
+            Vector2 dir = dirs[Random.Range(0, dirs.Length)];
             if (!WouldHitObstacle(dir)) yield return StartCoroutine(TakeStep(dir));
             yield return new WaitForSeconds(Random.Range(0.5f, 1.5f));
         }
@@ -294,7 +294,7 @@ public class EnemyAI : MonoBehaviour
         if (_chompBounceTimer <= 0f || WouldHitObstacle(_chompDir))
         {
             Vector2[] dirs = { Vector2.up, Vector2.down, Vector2.left, Vector2.right };
-            _chompDir         = dirs[Random.Range(0, dirs.Length)];
+            _chompDir = dirs[Random.Range(0, dirs.Length)];
             _chompBounceTimer = ChompBounceInterval;
         }
         StartCoroutine(TakeStep(_chompDir));
@@ -330,15 +330,15 @@ public class EnemyAI : MonoBehaviour
         dir = CardinalDir(dir);
         if (dir == Vector2.zero || WouldHitObstacle(dir)) yield break;
 
-        _isStepping        = true;
+        _isStepping = true;
         _stepCooldownTimer = stepCooldown;
-        FacingDirection    = dir;
+        FacingDirection = dir;
         _anim?.SetFacing(dir);
 
         _rb.velocity = Vector2.zero;
 
-        Vector2 start   = _rb.position;
-        Vector2 end     = SnapPos(start + dir * tileSize);
+        Vector2 start = _rb.position;
+        Vector2 end = SnapPos(start + dir * tileSize);
         float   elapsed = 0f;
 
         while (elapsed < stepDuration)
@@ -351,20 +351,20 @@ public class EnemyAI : MonoBehaviour
 
         _rb.MovePosition(end);
         _rb.velocity = Vector2.zero;
-        _isStepping  = false;
+        _isStepping = false;
     }
 
     public void BeginChase()
     {
         StopAllCoroutines();
-        _isStepping        = false;
+        _isStepping = false;
         _stepCooldownTimer = 0f;
     }
 
     public void StopMovement()
     {
         StopAllCoroutines();
-        _isStepping  = false;
+        _isStepping = false;
         _rb.velocity = Vector2.zero;
     }
 

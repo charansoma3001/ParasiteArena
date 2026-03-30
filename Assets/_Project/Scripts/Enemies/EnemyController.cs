@@ -13,7 +13,7 @@ public class EnemyController : MonoBehaviour
 
     [Header("Attack Tile")]
     public GameObject attackTilePrefab;
-    public float      tileSize = 0.5f;
+    public float tileSize = 0.5f;
 
     [Header("Arrow (Archer only)")]
     public GameObject arrowPrefab;
@@ -24,18 +24,18 @@ public class EnemyController : MonoBehaviour
     [Header("VFX")]
     public GameObject possessedIndicatorPrefab;
 
-    public EnemyState CurrentState     { get; private set; } = EnemyState.Idle;
-    public float      CurrentHP        { get; private set; }
-    public bool       IsPossessed      => CurrentState == EnemyState.Possessed;
-    public bool       IsDead           => CurrentState == EnemyState.Dead;
-    public bool       AttackTileActive { get; private set; }
+    public EnemyState CurrentState { get; private set; } = EnemyState.Idle;
+    public float CurrentHP { get; private set; }
+    public bool IsPossessed => CurrentState == EnemyState.Possessed;
+    public bool IsDead => CurrentState == EnemyState.Dead;
+    public bool AttackTileActive { get; private set; }
 
-    private EnemyAI       _ai;
+    private EnemyAI _ai;
     private EnemyAnimator _anim;
-    private float         _atkCooldown;
-    private float         _possessionTimer;
-    private GameObject    _possessedIndicator;
-    private Collider2D    _col;
+    private float _atkCooldown;
+    private float _possessionTimer;
+    private GameObject _possessedIndicator;
+    private Collider2D _col;
 
     private readonly List<GameObject> _activeTiles = new();
 
@@ -45,8 +45,8 @@ public class EnemyController : MonoBehaviour
 
     private void Awake()
     {
-        _ai   = GetComponent<EnemyAI>();
-        _col  = GetComponent<Collider2D>();
+        _ai = GetComponent<EnemyAI>();
+        _col = GetComponent<Collider2D>();
         _anim = GetComponentInChildren<EnemyAnimator>();
     }
 
@@ -59,8 +59,8 @@ public class EnemyController : MonoBehaviour
     public void Init(EnemyStats overrideStats = null)
     {
         if (overrideStats != null) stats = overrideStats;
-        CurrentHP        = stats.maxHealth;
-        _atkCooldown     = 0f;
+        CurrentHP = stats.maxHealth;
+        _atkCooldown = 0f;
         _possessionTimer = 0f;
         AttackTileActive = false;
         SetState(EnemyState.Idle);
@@ -212,16 +212,16 @@ public class EnemyController : MonoBehaviour
     private IEnumerator SwordAttack()
     {
         _anim?.PlayAttack();
-        Vector2 fwd  = _ai.FacingDirection;
+        Vector2 fwd = _ai.FacingDirection;
         Vector2 perp = new Vector2(-fwd.y, fwd.x);
 
         Vector3 centre = transform.position + (Vector3)(fwd  * tileSize);
-        Vector3 left   = centre             + (Vector3)(perp * tileSize);
-        Vector3 right  = centre             - (Vector3)(perp * tileSize);
+        Vector3 left = centre + (Vector3)(perp * tileSize);
+        Vector3 right = centre - (Vector3)(perp * tileSize);
 
         var tc = SpawnTile(centre, tileSize);
-        var tl = SpawnTile(left,   tileSize);
-        var tr = SpawnTile(right,  tileSize);
+        var tl = SpawnTile(left, tileSize);
+        var tr = SpawnTile(right, tileSize);
         AttackTileActive = true;
 
         yield return new WaitForSeconds(0.4f);
@@ -245,9 +245,9 @@ public class EnemyController : MonoBehaviour
     {
         _anim?.PlayAttack();
 
-        Vector2 fwd         = _ai.FacingDirection;
-        bool    wasPossessed = IsPossessed;
-        int     range        = stats.arrowRange > 0 ? stats.arrowRange : 6;
+        Vector2 fwd = _ai.FacingDirection;
+        bool wasPossessed = IsPossessed;
+        int range = stats.arrowRange > 0 ? stats.arrowRange : 6;
 
         var preview = new List<GameObject>();
         for (int i = 1; i <= range; i++)
@@ -430,25 +430,25 @@ public class EnemyController : MonoBehaviour
 
 public class ArrowProjectile : MonoBehaviour
 {
-    private Vector2    _dir;
-    private float      _speed;
-    private float      _damage;   
-    private float      _enemyDamage; 
+    private Vector2 _dir;
+    private float _speed;
+    private float _damage;   
+    private float _enemyDamage; 
     private GameObject _owner;
-    private bool       _ready;
-    private bool       _firedByPossessed;
+    private bool _ready;
+    private bool _firedByPossessed;
 
     public void Init(Vector2 dir, float speed, float damage, GameObject owner)
         => Init(dir, speed, damage, damage, owner, false);
 
     public void Init(Vector2 dir, float speed, float playerDamage, float enemyDamage, GameObject owner, bool firedByPossessed)
     {
-        _dir              = dir.normalized;
-        _speed            = speed;
-        _damage           = playerDamage;
-        _enemyDamage      = enemyDamage;
-        _owner            = owner;
-        _ready            = true;
+        _dir = dir.normalized;
+        _speed = speed;
+        _damage = playerDamage;
+        _enemyDamage = enemyDamage;
+        _owner = owner;
+        _ready = true;
         _firedByPossessed = firedByPossessed;
 
         transform.rotation = Quaternion.AngleAxis(
@@ -458,7 +458,7 @@ public class ArrowProjectile : MonoBehaviour
         {
             var c = gameObject.AddComponent<CircleCollider2D>();
             c.isTrigger = true;
-            c.radius    = 0.1f;
+            c.radius = 0.1f;
         }
         else GetComponent<Collider2D>().isTrigger = true;
 

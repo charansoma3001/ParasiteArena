@@ -2,15 +2,15 @@ using UnityEngine;
 
 public class EnemyAnimator : MonoBehaviour
 {
-    [Header("State Names — match exactly what is in your Animator Controller")]
-    public string idleState   = "IdleNormal";
-    public string walkState   = "Walk";
+    [Header("State Names")]
+    public string idleState = "IdleNormal";
+    public string walkState = "Walk";
     public string attackState = "Attack1";
-    public string hitState    = "Hit";
-    public string deathState  = "Hit";
+    public string hitState = "Hit";
+    public string deathState = "Hit";
     private Animator _anim;
     private SpriteRenderer _spriteRenderer;
-    private string   _current;
+    private string _current;
 
     private void Awake()
     {
@@ -28,23 +28,23 @@ public class EnemyAnimator : MonoBehaviour
         }
     }
 
-    public void PlayIdle()   => Play(idleState);
-    public void PlayWalk()   => Play(walkState);
+    public void PlayIdle() => Play(idleState);
+    public void PlayWalk() => Play(walkState);
     public void PlayAttack() => Play(attackState);
-    public void PlayHit()    => Play(hitState);
-    public void PlayDeath()  => Play(deathState);
+    public void PlayHit() => Play(hitState);
+    public void PlayDeath() => Play(deathState);
 
     public void TickMovement(bool isMoving)
     {
         if (_current == attackState || _current == hitState) return;
         if (isMoving) PlayWalk();
-        else          PlayIdle();
+        else PlayIdle();
     }
 
     public void SetFacing(Vector2 dir)
     {
         if (_spriteRenderer == null) return;
-        if      (dir.x > 0.1f)  _spriteRenderer.flipX = false;
+        if (dir.x > 0.1f)  _spriteRenderer.flipX = false;
         else if (dir.x < -0.1f) _spriteRenderer.flipX = true;
     }
 }

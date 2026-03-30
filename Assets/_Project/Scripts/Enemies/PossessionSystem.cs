@@ -4,7 +4,7 @@ public class PossessionSystem : MonoBehaviour
 {
     public static PossessionSystem Instance { get; private set; }
 
-    public bool            IsPossessing   { get; private set; }
+    public bool IsPossessing   { get; private set; }
     public EnemyController PossessedEnemy { get; private set; }
 
     private Transform _player;
