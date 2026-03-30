@@ -93,12 +93,19 @@ public class ExecutionerBossController : MonoBehaviour
         _baseAttackCooldown = _ctrl.stats.attackCooldown;
 
         StartCoroutine(SummonLoop());
+        
+        EnemyController.OnEnemyDied += OnBossDied;
     }
 
     private void Update()
     {
         if (_ctrl.IsDead || _transitioning) return;
         CheckPhaseEscalation();
+    }
+
+    private void OnDisable()
+    {
+        EnemyController.OnEnemyDied -= OnBossDied;
     }
 
 
@@ -112,6 +119,15 @@ public class ExecutionerBossController : MonoBehaviour
 
         if (desired > CurrentPhase)
             StartCoroutine(EscalateTo(desired));
+    }
+
+    private void OnBossDied(EnemyController deadEnemy)
+    {
+        if (deadEnemy != _ctrl) return;
+
+        AudioManager.Instance?.PlayGameWin();
+        
+        GameManager.Instance?.LoadMainMenu();
     }
 
     private IEnumerator EscalateTo(int phase)
