@@ -9,7 +9,7 @@ public class RareChest : MonoBehaviour
 {
     public Sprite closedSprite;
     public Sprite openSprite;
-    public KeyCode interactKey = KeyCode.O;
+    public KeyCode interactKey = KeyCode.C;
 
     public static event System.Action<Vector2> OnChestOpened;
 

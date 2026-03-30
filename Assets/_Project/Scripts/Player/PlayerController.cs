@@ -102,7 +102,7 @@ public class PlayerController : MonoBehaviour
                 PossessionSystem.Instance.UsePossessedAbility();
             if (Input.GetKeyDown(KeyCode.R))
                 PossessionSystem.Instance.UsePossessedBlock();
-            if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Escape))
+            if (Input.GetKeyDown(KeyCode.E))
                 PossessionSystem.Instance.EndPossession();
 
             return;
