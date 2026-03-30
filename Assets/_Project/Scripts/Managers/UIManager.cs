@@ -5,6 +5,8 @@ using TMPro; // Required for Unity's modern text system
 
 public class UIManager : MonoBehaviour
 {
+    public static UIManager Instance { get; private set; }
+
     [Header("UI Text References")]
     public TextMeshProUGUI levelText;
     public TextMeshProUGUI xpText;
@@ -48,6 +50,17 @@ public class UIManager : MonoBehaviour
     {
         public string Text;
         public float Duration;
+    }
+
+    private void Awake()
+    {
+        // Singleton initialization
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
     }
 
     private void Start()
