@@ -2,6 +2,9 @@ using UnityEngine;
 
 public class MapManager : MonoBehaviour
 {
+    // Singleton so spawners can query terrain without FindObjectOfType calls.
+    public static MapManager Instance { get; private set; }
+
     public int width = 60;
     public int height = 60;
 
@@ -81,6 +84,36 @@ public class MapManager : MonoBehaviour
 
     //World-space centre of the map
     public Vector2 MapCentre => new Vector2(width * 0.5f, height * 0.5f);
+
+    // Returns the world-space Bounds that enemy spawners should treat as the
+    // playable area.  The border clear strip is excluded on every side so
+    // spawns always land on tiles that actually exist in the noise map.
+    // An extra one-tile inset is added on top of borderClearWidth so enemies
+    // never appear right at the hard edge of the vegetation border.
+    public Bounds GetPlayableBounds()
+    {
+        int inset = borderClearWidth + 1;
+        float minX = inset;
+        float minY = inset;
+        float maxX = width  - inset;
+        float maxY = height - inset;
+        Vector3 centre = new Vector3((minX + maxX) * 0.5f, (minY + maxY) * 0.5f, 0f);
+        Vector3 size   = new Vector3(maxX - minX, maxY - minY, 0f);
+        return new Bounds(centre, size);
+    }
+
+    // Returns true when a world-space position lies within the playable tile grid.
+    // Uses the same inset as GetPlayableBounds so the two are always consistent.
+    public bool IsInsidePlayableArea(Vector2 worldPos)
+    {
+        return GetPlayableBounds().Contains(new Vector3(worldPos.x, worldPos.y, 0f));
+    }
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        Instance = this;
+    }
 
     private void Start()
     {
