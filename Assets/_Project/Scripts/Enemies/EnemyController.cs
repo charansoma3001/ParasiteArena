@@ -48,6 +48,12 @@ public class EnemyController : MonoBehaviour
         _anim = GetComponentInChildren<EnemyAnimator>();
     }
 
+    private void Start()
+    {
+        if (stats != null && CurrentHP == 0f)
+            Init();
+    }
+
     public void Init(EnemyStats overrideStats = null)
     {
         if (overrideStats != null) stats = overrideStats;
@@ -111,10 +117,19 @@ public class EnemyController : MonoBehaviour
                 ClearActiveTiles();
                 _atkCooldown = 0f;
                 _ai.StopMovement();
+                // Reset the animator immediately — if the enemy was mid-attack
+                // (e.g. an archer drawing its bow), StopAllCoroutines kills the
+                // C# coroutine but the Animator stays on the Attack1 state.
+                _anim?.PlayIdle();
                 _possessionTimer = stats.possessionDuration + (PossessionSystem.Instance != null ? PossessionSystem.Instance.BonusPossessionTime : 0f);
                 if (possessedIndicatorPrefab)
+                {
                     _possessedIndicator = Instantiate(possessedIndicatorPrefab,
                                                       transform.position, Quaternion.identity, transform);
+                    // Offset the indicator upward by 2.5 tiles so it floats clearly
+                    // above the enemy sprite rather than sitting on top of it.
+                    _possessedIndicator.transform.localPosition = Vector3.up * (tileSize * 2.5f);
+                }
                 OnPossessionStart?.Invoke(this);
                 break;
 
@@ -226,11 +241,18 @@ public class EnemyController : MonoBehaviour
 
         yield return new WaitForSeconds(0.4f);
 
+        // Collect unique targets across all three zones before dealing any damage.
+        // Without deduplication a target whose collider overlaps two zones
+        // would be hit twice in the same swing — effectively doubling the damage.
+        var hitSet = new HashSet<Collider2D>();
         foreach (var pos in new[] { centre, left, right })
-        {
             foreach (var h in Physics2D.OverlapBoxAll(pos, Vector2.one * tileSize * 0.85f, 0f))
-                HitTarget(h, GetActualAttackDamage());
-        }
+                hitSet.Add(h);
+
+        float dmg = GetActualAttackDamage();   // player-facing damage (may include upgrade bonus)
+        float enemyDmg = stats.attackDamage;   // what other enemies actually receive
+        foreach (var h in hitSet)
+            HitTarget(h, dmg, enemyDmg);
 
         yield return new WaitForSeconds(0.2f);
         if (tc) Destroy(tc); if (tl) Destroy(tl); if (tr) Destroy(tr);
@@ -263,14 +285,14 @@ public class EnemyController : MonoBehaviour
         {
             var go   = Instantiate(arrowPrefab, transform.position, Quaternion.identity);
             var proj = go.GetComponent<ArrowProjectile>() ?? go.AddComponent<ArrowProjectile>();
-            proj.Init(fwd, stats.arrowSpeed, GetActualAttackDamage(), gameObject, wasPossessed);
+            proj.Init(fwd, stats.arrowSpeed, GetActualAttackDamage(), stats.attackDamage, gameObject, wasPossessed);
         }
         else
         {
             var go   = new GameObject("Arrow_fallback");
             go.transform.position = transform.position;
             var proj = go.AddComponent<ArrowProjectile>();
-            proj.Init(fwd, stats.arrowSpeed, GetActualAttackDamage(), gameObject, wasPossessed);
+            proj.Init(fwd, stats.arrowSpeed, GetActualAttackDamage(), stats.attackDamage, gameObject, wasPossessed);
         }
 
         yield return new WaitForSeconds(0.15f);
@@ -289,14 +311,19 @@ public class EnemyController : MonoBehaviour
         AttackTileActive = true;
 
         var rb = GetComponent<Rigidbody2D>();
+        // Track targets already hit this bash — without this the overlap runs
+        // every Update frame for the 0.3 s window, dealing damage ~18× at 60 fps.
+        var bashedTargets = new HashSet<Collider2D>();
         while (elapsed < bashTime)
         {
-    
             rb.velocity = Vector2.zero;
             rb.MovePosition(rb.position + dir * spd * Time.fixedDeltaTime);
             elapsed += Time.deltaTime;
             foreach (var h in Physics2D.OverlapCircleAll(transform.position, tileSize * 0.4f))
-                HitTarget(h, stats.bashDamage);
+            {
+                if (bashedTargets.Add(h))          // Add returns false if already present
+                    HitTarget(h, stats.bashDamage, stats.bashDamage);
+            }
             yield return null;
         }
 
@@ -318,7 +345,7 @@ public class EnemyController : MonoBehaviour
         yield return new WaitForSeconds(stats.meteorDelay);
 
         foreach (var h in Physics2D.OverlapCircleAll(targetPos, stats.meteorRadius * tileSize))
-            HitTarget(h, GetActualAttackDamage());
+            HitTarget(h, GetActualAttackDamage(), stats.attackDamage);
 
         if (tile) Destroy(tile);
         AttackTileActive = false;
@@ -335,7 +362,7 @@ public class EnemyController : MonoBehaviour
         yield return new WaitForSeconds(0.2f);
 
         foreach (var h in Physics2D.OverlapCircleAll(bitePos, tileSize * 0.5f))
-            HitTarget(h, GetActualAttackDamage());
+            HitTarget(h, GetActualAttackDamage(), stats.attackDamage);
 
         yield return new WaitForSeconds(0.1f);
         if (tile) Destroy(tile);
@@ -356,10 +383,12 @@ public class EnemyController : MonoBehaviour
         AttackTileActive = true;
         yield return new WaitForSeconds(0.2f);
 
+        // Beat 1 — single zone, no deduplication needed, but use a set for consistency.
+        float dmg1 = GetActualAttackDamage();
         foreach (var h in Physics2D.OverlapBoxAll(
             transform.position + (Vector3)(fwd * tileSize * 1.5f),
             Vector2.one * tileSize, 0f))
-            HitTarget(h, GetActualAttackDamage());
+            HitTarget(h, dmg1, stats.attackDamage);
 
         if (t1) Destroy(t1);
         yield return new WaitForSeconds(0.1f);
@@ -369,6 +398,9 @@ public class EnemyController : MonoBehaviour
         var t4 = SpawnTile(transform.position - (Vector3)(perp  * tileSize), tileSize);
         yield return new WaitForSeconds(0.2f);
 
+        // Beat 2 — three overlapping zones: deduplicate so a target in the
+        // corner between two zones only takes damage once.
+        var beat2Set = new HashSet<Collider2D>();
         foreach (var p in new[]
         {
             transform.position + (Vector3)(fwd  * tileSize),
@@ -377,8 +409,12 @@ public class EnemyController : MonoBehaviour
         })
         {
             foreach (var h in Physics2D.OverlapBoxAll(p, Vector2.one * tileSize * 0.85f, 0f))
-                HitTarget(h, GetActualAttackDamage() * 0.75f);
+                beat2Set.Add(h);
         }
+
+        float dmg2 = GetActualAttackDamage() * 0.75f;
+        foreach (var h in beat2Set)
+            HitTarget(h, dmg2, stats.attackDamage * 0.75f);
 
         if (t2) Destroy(t2); if (t3) Destroy(t3); if (t4) Destroy(t4);
         AttackTileActive = false;
@@ -386,18 +422,24 @@ public class EnemyController : MonoBehaviour
     }
 
 
-    private void HitTarget(Collider2D h, float dmg)
+    // playerDmg  — damage dealt to PlayerController.  May include PlayerAttackDamage
+    //              for future direct-attack mechanics.  Ignored during possession
+    //              because PlayerController.TakeDamage() returns early while possessing.
+    // enemyDmg   — damage dealt to EnemyController targets.  Always the attacker's
+    //              base stats value; PlayerAttackDamage is intentionally excluded so
+    //              possession attacks don't stack player bonuses onto enemy-vs-enemy hits.
+    private void HitTarget(Collider2D h, float playerDmg, float enemyDmg)
     {
         if (h == null) return;
-        h.GetComponent<PlayerController>()?.TakeDamage(dmg);
+        h.GetComponent<PlayerController>()?.TakeDamage(playerDmg);
 
         var ec = h.GetComponent<EnemyController>();
         if (ec == null || ec == this) return;
 
         if (IsPossessed && !ec.IsPossessed)
-            ec.TakeDamage(dmg);
+            ec.TakeDamage(enemyDmg);
         else if (!IsPossessed && ec.IsPossessed)
-            ec.TakeDamage(dmg);
+            ec.TakeDamage(enemyDmg);
     }
 
     public void TakeDamage(float amount)
@@ -470,19 +512,21 @@ public class ArrowProjectile : MonoBehaviour
 {
     private Vector2    _dir;
     private float      _speed;
-    private float      _damage;
+    private float      _damage;       // damage vs the player
+    private float      _enemyDamage;  // damage vs other enemies (base stats, no player bonus)
     private GameObject _owner;
     private bool       _ready;
     private bool       _firedByPossessed;
 
     public void Init(Vector2 dir, float speed, float damage, GameObject owner)
-        => Init(dir, speed, damage, owner, false);
+        => Init(dir, speed, damage, damage, owner, false);
 
-    public void Init(Vector2 dir, float speed, float damage, GameObject owner, bool firedByPossessed)
+    public void Init(Vector2 dir, float speed, float playerDamage, float enemyDamage, GameObject owner, bool firedByPossessed)
     {
         _dir              = dir.normalized;
         _speed            = speed;
-        _damage           = damage;
+        _damage           = playerDamage;
+        _enemyDamage      = enemyDamage;
         _owner            = owner;
         _ready            = true;
         _firedByPossessed = firedByPossessed;
@@ -519,7 +563,7 @@ public class ArrowProjectile : MonoBehaviour
         if (ec != null && ec.gameObject != _owner)
         {
             if (ec.IsPossessed || _firedByPossessed)
-            { ec.TakeDamage(_damage); hit = true; }
+            { ec.TakeDamage(_enemyDamage); hit = true; }
         }
 
         if (hit) Destroy(gameObject);

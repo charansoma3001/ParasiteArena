@@ -27,6 +27,7 @@ public class PlayerController : MonoBehaviour
     private Animator       _anim;
     private SpriteRenderer _sr;
     private Collider2D     _col;
+    private PlayerIndicator _playerIndicator;
 
     private Vector2 _movement;
     private Vector2 _lastMoveDir = Vector2.down;
@@ -50,9 +51,8 @@ public class PlayerController : MonoBehaviour
         _anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>();
         _sr   = GetComponent<SpriteRenderer>() ?? GetComponentInChildren<SpriteRenderer>();
         _col  = GetComponent<Collider2D>();
+        _playerIndicator = FindFirstObjectByType<PlayerIndicator>();
 
-        // PlayerMovement.FixedUpdate sets rb.velocity every frame and overwrites
-        // the dash velocity, making Space do nothing. Disable it permanently.
         var pm = GetComponent<PlayerMovement>();
         if (pm != null) pm.enabled = false;
     }
@@ -243,6 +243,7 @@ public class PlayerController : MonoBehaviour
     {
         if (_sr)  _sr.enabled  = false;
         if (_col) _col.enabled = false;
+        if (_playerIndicator) _playerIndicator.gameObject.SetActive(false);
         _rb.velocity = Vector2.zero;
         SetAnimFloat("Speed", 0);
         transform.position    = possessed.transform.position;
@@ -254,6 +255,7 @@ public class PlayerController : MonoBehaviour
         transform.position = returnPos;
         if (_sr)  _sr.enabled  = true;
         if (_col) _col.enabled = true;
+        if (_playerIndicator) _playerIndicator.gameObject.SetActive(true);
     }
 
     private void OnEnable()  => PossessionSystem.OnPossessionChanged += HandlePossessionChanged;

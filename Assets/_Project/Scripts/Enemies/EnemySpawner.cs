@@ -77,7 +77,8 @@ public class EnemySpawner : MonoBehaviour
             return;
         }
 
-        Instantiate(prefab, spawnPos, Quaternion.identity);
+        var go = Instantiate(prefab, spawnPos, Quaternion.identity);
+        go.GetComponent<EnemyController>()?.Init();
     }
 
     private Vector2 GetSpawnPositionOutsideCamera()
