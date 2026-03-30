@@ -108,7 +108,7 @@ public class LevelUpRewardManager : MonoBehaviour
             return;
         }
 
-        string levelUpMessage = $"Level Up: {selectedUpgrade.upgradeName}";
+        string levelUpMessage = $"Leveled Up: {selectedUpgrade.description}";
         if (UIManager.Instance != null)
         {
             UIManager.Instance.ShowMessageHUD(levelUpMessage, 2f);
