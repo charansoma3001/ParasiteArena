@@ -15,6 +15,9 @@ public class ChestSystem : MonoBehaviour
     [Header("Available Upgrades (Drag ScriptableObjects Here)")]
     public List<UpgradeData> possibleUpgrades;
 
+    [Header("Audio")]
+    public AudioClip openSfx;
+
     private bool hasBeenOpened = false;
     private PlayerController _player;
 
@@ -26,6 +29,10 @@ public class ChestSystem : MonoBehaviour
     {
         if (hasBeenOpened) return;
         hasBeenOpened = true;
+
+        if (openSfx != null && AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFXAtPos(openSfx, transform.position);
+
         string chestMessage;
 
         // The RNG Roll (Pick a random number between 0.0 and 100.0)
