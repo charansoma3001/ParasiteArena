@@ -14,7 +14,6 @@ public enum StatType
     PossessionRange
 }
 
-// 1. This is the new container for a single stat change
 [System.Serializable]
 public class StatModifier
 {
@@ -35,7 +34,6 @@ public class UpgradeData : ScriptableObject
     [Header("Economy")]
     public int goldCost;
 
-    // 2. Instead of one stat, we now have a LIST of stats!
     [Header("Stat Modifiers")]
     public List<StatModifier> statModifiers = new List<StatModifier>();
 }

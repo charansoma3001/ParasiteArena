@@ -8,8 +8,6 @@ public class EnemyAnimator : MonoBehaviour
     public string attackState = "Attack1";
     public string hitState    = "Hit";
     public string deathState  = "Hit";
-    public string blockState  = "Block!";
-
     private Animator _anim;
     private SpriteRenderer _spriteRenderer;
     private string   _current;
@@ -35,12 +33,10 @@ public class EnemyAnimator : MonoBehaviour
     public void PlayAttack() => Play(attackState);
     public void PlayHit()    => Play(hitState);
     public void PlayDeath()  => Play(deathState);
-    public void PlayBlock()  => Play(blockState);
 
     public void TickMovement(bool isMoving)
     {
-        if (_current == attackState || _current == hitState ||
-            _current == deathState  || _current == blockState) return;
+        if (_current == attackState || _current == hitState) return;
         if (isMoving) PlayWalk();
         else          PlayIdle();
     }
