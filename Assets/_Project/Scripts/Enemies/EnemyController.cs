@@ -19,6 +19,8 @@ public class EnemyController : MonoBehaviour
     public GameObject arrowPrefab;
 
     [Header("SFX")]
+    public AudioClip attackSfx;
+    public AudioClip hitSfx;
     public AudioClip deathSfx;
 
     [Header("VFX")]
@@ -189,6 +191,9 @@ public class EnemyController : MonoBehaviour
 
     private IEnumerator RunAttackForType(EnemyStats.EnemyType type)
     {
+        if (attackSfx != null && AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFXAtPos(attackSfx, transform.position);
+
         switch (type)
         {
             case EnemyStats.EnemyType.Swordsman:
@@ -365,6 +370,10 @@ public class EnemyController : MonoBehaviour
     {
         if (IsDead) return;
         CurrentHP = Mathf.Max(0f, CurrentHP - amount);
+        
+        if (hitSfx != null && AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFXAtPos(hitSfx, transform.position);
+            
         _anim?.PlayHit();
         StartCoroutine(ResumeAfterHit());
         if (CurrentHP <= 0f) SetState(EnemyState.Dead);
@@ -387,7 +396,12 @@ public class EnemyController : MonoBehaviour
         _col.enabled = false;
         _anim?.PlayDeath();
         if (deathSfx != null)
-            AudioSource.PlayClipAtPoint(deathSfx, transform.position);
+        {
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlaySFXAtPos(deathSfx, transform.position);
+            else
+                AudioSource.PlayClipAtPoint(deathSfx, transform.position);
+        }
         OnEnemyDied?.Invoke(this);
         StartCoroutine(DelayedDestroy(0.8f));
     }

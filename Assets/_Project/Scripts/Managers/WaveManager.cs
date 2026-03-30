@@ -116,6 +116,9 @@ public class WaveManager : MonoBehaviour
         boss.GetComponent<EnemyController>()?.Init();
 
         BossSpawned = true;
+        
+        AudioManager.Instance?.PlayBossWave();
+        
         OnBossSpawned?.Invoke();
         Debug.Log($"[WaveManager] Boss spawned after Wave {CurrentWave}.");
     }

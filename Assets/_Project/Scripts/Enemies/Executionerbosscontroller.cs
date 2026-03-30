@@ -58,7 +58,8 @@ public class ExecutionerBossController : MonoBehaviour
     public GameObject skill1TilePrefab;
 
     [Header("Phase Transition")]
-    public AudioClip phaseTransitionSfx;
+    public AudioClip enragedSfx;
+    public AudioClip berzerkedSfx;
     public float transitionStunDuration = 1.2f;
 
    
@@ -119,8 +120,11 @@ public class ExecutionerBossController : MonoBehaviour
         CurrentPhase   = phase;
 
         _ctrl.SetState(EnemyController.EnemyState.Stunned);
-        if (phaseTransitionSfx != null)
-            AudioSource.PlayClipAtPoint(phaseTransitionSfx, transform.position);
+        
+        if (phase == 2 && enragedSfx != null && AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFXAtPos(enragedSfx, transform.position);
+        else if (phase == 3 && berzerkedSfx != null && AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFXAtPos(berzerkedSfx, transform.position);
 
         yield return new WaitForSeconds(transitionStunDuration);
 

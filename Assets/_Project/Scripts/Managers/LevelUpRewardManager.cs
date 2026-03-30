@@ -109,6 +109,9 @@ public class LevelUpRewardManager : MonoBehaviour
         }
 
         string levelUpMessage = $"Leveled Up: {selectedUpgrade.description}";
+        
+        AudioManager.Instance?.PlayLevelUp();
+
         if (UIManager.Instance != null)
         {
             UIManager.Instance.ShowMessageHUD(levelUpMessage, 2f);

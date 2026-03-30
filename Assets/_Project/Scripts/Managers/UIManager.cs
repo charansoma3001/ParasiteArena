@@ -376,6 +376,8 @@ public class UIManager : MonoBehaviour
     public void ShowGameOverScreen()
     {
         Time.timeScale = 0f; // Freeze the game
+        
+        AudioManager.Instance?.PlayGameOver();
 
         if (gameOverPanel != null)
             gameOverPanel.SetActive(true);
