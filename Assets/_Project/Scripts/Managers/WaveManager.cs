@@ -110,7 +110,50 @@ public class WaveManager : MonoBehaviour
         var player = GameObject.FindWithTag("Player");
         Vector3 origin = player != null ? player.transform.position : Vector3.zero;
 
+        // Try to land the boss on a walkable grass tile near the player.
+        // Both gates must pass: the candidate must be inside the playable area
+        // bounds AND on a Grass tile.  Without the bounds check, GetTerrainType
+        // clamps out-of-range positions to edge tiles and silently returns Grass,
+        // which allows the boss to spawn outside the visible background.
+        MapManager map = MapManager.Instance;
+
+        // Default: clamped offset (will be overwritten by a valid candidate when found).
         Vector3 spawnPos = origin + new Vector3(bossSpawnOffset, 0f, 0f);
+        if (map != null)
+        {
+            Bounds playable = map.GetPlayableBounds();
+
+            // Clamp the default to bounds immediately so the fallback is safe.
+            spawnPos = new Vector3(
+                Mathf.Clamp(spawnPos.x, playable.min.x, playable.max.x),
+                Mathf.Clamp(spawnPos.y, playable.min.y, playable.max.y),
+                0f);
+
+            const int attempts = 20;
+            bool found = false;
+            for (int i = 0; i < attempts; i++)
+            {
+                float angle = UnityEngine.Random.Range(0f, 360f) * Mathf.Deg2Rad;
+                Vector3 candidate = origin + new Vector3(
+                    Mathf.Cos(angle) * bossSpawnOffset,
+                    Mathf.Sin(angle) * bossSpawnOffset,
+                    0f);
+
+                // Gate 1: inside playable bounds.
+                if (!map.IsInsidePlayableArea(new Vector2(candidate.x, candidate.y))) continue;
+
+                // Gate 2: grass tile.
+                int tx = Mathf.RoundToInt(candidate.x);
+                int ty = Mathf.RoundToInt(candidate.y);
+                if (map.GetTerrainType(tx, ty) != TerrainType.Grass) continue;
+
+                spawnPos = candidate;
+                found = true;
+                break;
+            }
+            if (!found)
+                Debug.LogWarning("[WaveManager] Boss could not find a valid grass tile inside playable area — spawning at clamped default offset.");
+        }
 
         var boss = Instantiate(bossPrefab, spawnPos, Quaternion.identity);
         boss.GetComponent<EnemyController>()?.Init();
