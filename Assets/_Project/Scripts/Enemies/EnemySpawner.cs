@@ -1,26 +1,33 @@
 using UnityEngine;
 
-// Listens to WaveManager events and spawns Swordsmen/Archers outside the camera.
-// Attach to an empty GameObject in the scene.
 public class EnemySpawner : MonoBehaviour
 {
     [Header("Enemy Prefabs")]
     public GameObject swordsmanPrefab;
     public GameObject archerPrefab;
 
-    [Header("Spawn Settings")]
-    public int enemiesPerWave = 5;     // total enemies to spawn per wave
-    public float spawnInterval = 1f;   // seconds between each spawn
-    public float spawnDistance = 2f;   // extra distance past the camera edge
+    [Header("Wave Spawn Settings")]
+    [Tooltip("Total enemies spawned per wave.")]
+    public int   enemiesPerWave = 5;
+    [Tooltip("Seconds between individual spawns.")]
+    public float spawnInterval  = 1f;
 
-    private Camera _cam;
-    private float _timer;
-    private bool _spawning;
-    private int _spawnedThisWave;
+    [Header("Spawn Radius (player-relative)")]
+    [Tooltip("Enemies spawn at least this far from the player (world units). " +
+             "Keep above your camera half-height so they appear off-screen.")]
+    public float spawnRadiusMin = 6f;
+    [Tooltip("Enemies spawn at most this far from the player.")]
+    public float spawnRadiusMax = 9f;
+
+    private Transform _player;
+    private float     _timer;
+    private bool      _spawning;
+    private int       _spawnedThisWave;
 
     private void Start()
     {
-        _cam = Camera.main;
+        var playerGO = GameObject.FindWithTag("Player");
+        if (playerGO) _player = playerGO.transform;
 
         if (WaveManager.Instance != null)
         {
@@ -49,7 +56,6 @@ public class EnemySpawner : MonoBehaviour
     private void OnWaveEnded()
     {
         _spawning = false;
-        Debug.Log("[EnemySpawner] Wave ended — spawning stopped.");
     }
 
     private void Update()
@@ -68,12 +74,12 @@ public class EnemySpawner : MonoBehaviour
 
     private void SpawnEnemy()
     {
-        Vector2 spawnPos = GetSpawnPositionOutsideCamera();
+        Vector2 spawnPos = GetSpawnPosition();
         GameObject prefab = Random.value > 0.5f ? swordsmanPrefab : archerPrefab;
 
         if (prefab == null)
         {
-            Debug.LogWarning("[EnemySpawner] Prefab not assigned in Inspector!");
+            Debug.LogWarning("[EnemySpawner] Prefab not assigned in Inspector.");
             return;
         }
 
@@ -81,20 +87,18 @@ public class EnemySpawner : MonoBehaviour
         go.GetComponent<EnemyController>()?.Init();
     }
 
-    private Vector2 GetSpawnPositionOutsideCamera()
+    // Spawns at a random angle, at a player-relative radius.
+    // This keeps enemies a consistent walking distance away regardless
+    // of camera size or zoom level, so they reach the player quickly.
+    private Vector2 GetSpawnPosition()
     {
-        float camHeight = _cam.orthographicSize;
-        float camWidth  = camHeight * _cam.aspect;
-        Vector3 camPos  = _cam.transform.position;
+        Vector2 origin = _player != null
+            ? (Vector2)_player.position
+            : Vector2.zero;
 
-        int edge = Random.Range(0, 4);
+        float angle  = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+        float radius = Random.Range(spawnRadiusMin, spawnRadiusMax);
 
-        return edge switch
-        {
-            0 => new Vector2(Random.Range(camPos.x - camWidth, camPos.x + camWidth), camPos.y + camHeight + spawnDistance),
-            1 => new Vector2(Random.Range(camPos.x - camWidth, camPos.x + camWidth), camPos.y - camHeight - spawnDistance),
-            2 => new Vector2(camPos.x - camWidth - spawnDistance, Random.Range(camPos.y - camHeight, camPos.y + camHeight)),
-            _ => new Vector2(camPos.x + camWidth + spawnDistance, Random.Range(camPos.y - camHeight, camPos.y + camHeight)),
-        };
+        return origin + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
     }
 }

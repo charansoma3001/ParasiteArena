@@ -6,17 +6,17 @@ using UnityEngine;
 public class ExecutionerBossController : MonoBehaviour
 {
     [Header("HP Thresholds (fraction of max HP)")]
-    [Tooltip("Phase 2 begins below this fraction — boss gets faster and summons more.")]
+    [Tooltip("Phase 2 begins below this fraction - boss gets faster and summons more.")]
     public float phase2Threshold = 0.60f;
-    [Tooltip("Phase 3 begins below this fraction — Skill1 spam, constant summoning.")]
+    [Tooltip("Phase 3 begins below this fraction - Skill1 spam, constant summoning.")]
     public float phase3Threshold = 0.30f;
 
-    [Header("Phase 2 — Enraged")]
+    [Header("Phase 2 - Enraged")]
     public float p2StepDurationMult    = 0.80f;
     public float p2StepCooldownMult    = 0.80f;
     public float p2AttackCooldownMult  = 0.75f;
 
-    [Header("Phase 3 — Berserk")]
+    [Header("Phase 3 - Berserk")]
     public float p3StepDurationMult    = 0.60f;
     public float p3StepCooldownMult    = 0.60f;
     public float p3AttackCooldownMult  = 0.50f;
@@ -27,7 +27,7 @@ public class ExecutionerBossController : MonoBehaviour
     public GameObject spiritPrefab;
     [Tooltip("How many spirits to spawn per summon event.")]
     public int spiritsPerSummon = 2;
-    [Tooltip("Max spirits alive at once — boss won't summon beyond this.")]
+    [Tooltip("Max spirits alive at once - boss won't summon beyond this.")]
     public int maxSpirits = 4;
 
     [Tooltip("Seconds between summon events in Phase 1.")]
@@ -41,7 +41,7 @@ public class ExecutionerBossController : MonoBehaviour
     public float summonAnimDuration = 0.9f;
 
  
-    [Header("Skill1 — Scythe Slam")]
+    [Header("Skill1 - Scythe Slam")]
     [Tooltip("Seconds between Skill1 uses in Phase 2.")]
     public float skill1IntervalP2 = 12f;
     [Tooltip("Seconds between Skill1 uses in Phase 3.")]
