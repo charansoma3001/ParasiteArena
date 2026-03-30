@@ -106,7 +106,7 @@ public class UIManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("UIManager couldn't find the ProgressionManager!");
+            Debug.LogError("UIManager couldn't find the ProgressionManager! (This is common in menu screen)");
         }
     }
 
