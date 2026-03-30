@@ -18,8 +18,10 @@ public class EnemyController : MonoBehaviour
     [Header("Arrow (Archer only)")]
     public GameObject arrowPrefab;
 
+    [Header("SFX")]
+    public AudioClip deathSfx;
+
     [Header("VFX")]
-    public GameObject deathVFXPrefab;
     public GameObject possessedIndicatorPrefab;
 
     public EnemyState CurrentState     { get; private set; } = EnemyState.Idle;
@@ -105,11 +107,6 @@ public class EnemyController : MonoBehaviour
 
             case EnemyState.Attacking:
                 StartCoroutine(PerformAttack());
-                break;
-
-            case EnemyState.Blocking:
-                _ai.StopMovement();
-                _anim?.PlayBlock();
                 break;
 
             case EnemyState.Possessed:
@@ -469,7 +466,8 @@ public class EnemyController : MonoBehaviour
         _ai.StopMovement();
         _col.enabled = false;
         _anim?.PlayDeath();
-        if (deathVFXPrefab) Instantiate(deathVFXPrefab, transform.position, Quaternion.identity);
+        if (deathSfx != null)
+            AudioSource.PlayClipAtPoint(deathSfx, transform.position);
         OnEnemyDied?.Invoke(this);
         StartCoroutine(DelayedDestroy(0.8f));
     }
