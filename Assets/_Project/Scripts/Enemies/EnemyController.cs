@@ -172,9 +172,9 @@ public class EnemyController : MonoBehaviour
             SetState(_ai.GetResumeState());
     }
 
-    public float GetActualAttackDamage()
+    public float GetActualAttackDamage(float baseDamage = -1f)
     {
-        float dmg = stats.attackDamage;
+        float dmg = baseDamage < 0f ? stats.attackDamage : baseDamage;
         if (IsPossessed && PossessionSystem.Instance != null)
         {
             dmg += PossessionSystem.Instance.PlayerAttackDamage;
@@ -249,10 +249,9 @@ public class EnemyController : MonoBehaviour
             foreach (var h in Physics2D.OverlapBoxAll(pos, Vector2.one * tileSize * 0.85f, 0f))
                 hitSet.Add(h);
 
-        float dmg = GetActualAttackDamage();   // player-facing damage (may include upgrade bonus)
-        float enemyDmg = stats.attackDamage;   // what other enemies actually receive
+        float dmg = GetActualAttackDamage();
         foreach (var h in hitSet)
-            HitTarget(h, dmg, enemyDmg);
+            HitTarget(h, dmg, dmg);
 
         yield return new WaitForSeconds(0.2f);
         if (tc) Destroy(tc); if (tl) Destroy(tl); if (tr) Destroy(tr);
@@ -285,14 +284,14 @@ public class EnemyController : MonoBehaviour
         {
             var go   = Instantiate(arrowPrefab, transform.position, Quaternion.identity);
             var proj = go.GetComponent<ArrowProjectile>() ?? go.AddComponent<ArrowProjectile>();
-            proj.Init(fwd, stats.arrowSpeed, GetActualAttackDamage(), stats.attackDamage, gameObject, wasPossessed);
+            proj.Init(fwd, stats.arrowSpeed, GetActualAttackDamage(), GetActualAttackDamage(), gameObject, wasPossessed);
         }
         else
         {
             var go   = new GameObject("Arrow_fallback");
             go.transform.position = transform.position;
             var proj = go.AddComponent<ArrowProjectile>();
-            proj.Init(fwd, stats.arrowSpeed, GetActualAttackDamage(), stats.attackDamage, gameObject, wasPossessed);
+            proj.Init(fwd, stats.arrowSpeed, GetActualAttackDamage(), GetActualAttackDamage(), gameObject, wasPossessed);
         }
 
         yield return new WaitForSeconds(0.15f);
@@ -322,7 +321,10 @@ public class EnemyController : MonoBehaviour
             foreach (var h in Physics2D.OverlapCircleAll(transform.position, tileSize * 0.4f))
             {
                 if (bashedTargets.Add(h))          // Add returns false if already present
-                    HitTarget(h, stats.bashDamage, stats.bashDamage);
+                {
+                    float dmg = GetActualAttackDamage(stats.bashDamage);
+                    HitTarget(h, dmg, dmg);
+                }
             }
             yield return null;
         }
@@ -345,7 +347,7 @@ public class EnemyController : MonoBehaviour
         yield return new WaitForSeconds(stats.meteorDelay);
 
         foreach (var h in Physics2D.OverlapCircleAll(targetPos, stats.meteorRadius * tileSize))
-            HitTarget(h, GetActualAttackDamage(), stats.attackDamage);
+            HitTarget(h, GetActualAttackDamage(), GetActualAttackDamage());
 
         if (tile) Destroy(tile);
         AttackTileActive = false;
@@ -355,14 +357,14 @@ public class EnemyController : MonoBehaviour
     private IEnumerator BiteAttack()
     {
         _anim?.PlayAttack();
-        Vector3 bitePos = transform.position + (Vector3)(_ai.FacingDirection * tileSize * 0.6f);
+        Vector3 bitePos = transform.position + (Vector3)(_ai.FacingDirection * tileSize * 1.0f);
         var tile = SpawnTile(bitePos, tileSize * 0.9f);
         AttackTileActive = true;
 
         yield return new WaitForSeconds(0.2f);
 
         foreach (var h in Physics2D.OverlapCircleAll(bitePos, tileSize * 0.5f))
-            HitTarget(h, GetActualAttackDamage(), stats.attackDamage);
+            HitTarget(h, GetActualAttackDamage(), GetActualAttackDamage());
 
         yield return new WaitForSeconds(0.1f);
         if (tile) Destroy(tile);
@@ -388,7 +390,7 @@ public class EnemyController : MonoBehaviour
         foreach (var h in Physics2D.OverlapBoxAll(
             transform.position + (Vector3)(fwd * tileSize * 1.5f),
             Vector2.one * tileSize, 0f))
-            HitTarget(h, dmg1, stats.attackDamage);
+            HitTarget(h, dmg1, dmg1);
 
         if (t1) Destroy(t1);
         yield return new WaitForSeconds(0.1f);
@@ -414,7 +416,7 @@ public class EnemyController : MonoBehaviour
 
         float dmg2 = GetActualAttackDamage() * 0.75f;
         foreach (var h in beat2Set)
-            HitTarget(h, dmg2, stats.attackDamage * 0.75f);
+            HitTarget(h, dmg2, dmg2);
 
         if (t2) Destroy(t2); if (t3) Destroy(t3); if (t4) Destroy(t4);
         AttackTileActive = false;
@@ -425,9 +427,9 @@ public class EnemyController : MonoBehaviour
     // playerDmg  — damage dealt to PlayerController.  May include PlayerAttackDamage
     //              for future direct-attack mechanics.  Ignored during possession
     //              because PlayerController.TakeDamage() returns early while possessing.
-    // enemyDmg   — damage dealt to EnemyController targets.  Always the attacker's
-    //              base stats value; PlayerAttackDamage is intentionally excluded so
-    //              possession attacks don't stack player bonuses onto enemy-vs-enemy hits.
+    // enemyDmg   — damage dealt to EnemyController targets.
+    //              Now configured to receive the same buffed damage as playerDmg so 
+    //              possession actually turns enemies into powerhouses.
     private void HitTarget(Collider2D h, float playerDmg, float enemyDmg)
     {
         if (h == null) return;

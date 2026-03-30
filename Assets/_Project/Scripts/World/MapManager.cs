@@ -26,6 +26,12 @@ public class MapManager : MonoBehaviour
     public int chestCount = 6;
     public float chestMinSeparation = 6f;
 
+    [Header("Rat Spawns")]
+    public GameObject ratPrefab;
+    [Range(0f, 1f)]
+    public float chestRatSpawnChance = 0.6f;
+    public int maxRatsPerChest = 2;
+
     //Noise value at which high grass begins to appear. Standard = 0.5f;
     public float highGrassThreshold = 0.58f;
 
@@ -46,6 +52,7 @@ public class MapManager : MonoBehaviour
     private Transform groundParent;
     private Transform vegetationParent;
     private Transform chestParent;
+    private Transform enemiesParent;
 
     //query terrain type without re-computing noise.
     private float[,] noiseMap;
@@ -89,6 +96,7 @@ public class MapManager : MonoBehaviour
         groundParent     = CreateParent("Ground");
         vegetationParent = CreateParent("Vegetation");
         chestParent      = CreateParent("Chests");
+        enemiesParent    = CreateParent("Enemies");
 
         // Clear chest position cache for reproducible placement.
         placedChestPositions.Clear();
@@ -227,6 +235,29 @@ public class MapManager : MonoBehaviour
 
         // Record position for separation checks.
         placedChestPositions.Add(worldPos);
+
+        // Spawn Rats around the chest as ambushes
+        if (ratPrefab != null && Random.value <= chestRatSpawnChance)
+        {
+            int ratsToSpawn = Random.Range(1, maxRatsPerChest + 1);
+            for (int i = 0; i < ratsToSpawn; i++)
+            {
+                // Find a random adjacent tile (up, down, left, right)
+                Vector2[] offsets = { Vector2.up, Vector2.down, Vector2.left, Vector2.right };
+                Vector2 spawnOffset = offsets[Random.Range(0, offsets.Length)];
+                Vector2 ratPos = worldPos + spawnOffset;
+
+                // Make sure it's valid (within bounds, grass)
+                if (ratPos.x >= 0 && ratPos.x < width && ratPos.y >= 0 && ratPos.y < height)
+                {
+                    if (GetTerrainType((int)ratPos.x, (int)ratPos.y) == TerrainType.Grass)
+                    {
+                        var spawnedRat = Instantiate(ratPrefab, new Vector3(ratPos.x, ratPos.y, 0f), Quaternion.identity, enemiesParent);
+                        spawnedRat.GetComponent<EnemyController>()?.Init();
+                    }
+                }
+            }
+        }
     }
     private void AddInteractTrigger(GameObject chestGO, float radius)
     {
