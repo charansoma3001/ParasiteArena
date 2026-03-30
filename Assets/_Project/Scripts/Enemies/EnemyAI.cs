@@ -117,7 +117,8 @@ public class EnemyAI : MonoBehaviour
         if (_isStepping) return;
 
         float tilesDist = TilesFrom(target);
-        if (tilesDist <= _stats.attackRange)
+        float effectiveRange = (_stats.enemyType == EnemyStats.EnemyType.Swordsman) ? _stats.attackRange * 1.8f : _stats.attackRange;
+        if (tilesDist <= effectiveRange)
         {
             FacingDirection = CardinalDir(target - transform.position);
             _anim?.SetFacing(FacingDirection);

@@ -220,8 +220,8 @@ public class EnemyController : MonoBehaviour
         Vector2 fwd = _ai.FacingDirection;
         Vector2 perp = new Vector2(-fwd.y, fwd.x);
 
-        Vector3 centre = transform.position + (Vector3)(fwd  * tileSize);
-        Vector3 left = centre + (Vector3)(perp * tileSize);
+        Vector3 centre = transform.position + (Vector3)(fwd  * tileSize * 1.8f);
+        Vector3 left = centre +     (Vector3)(perp * tileSize);
         Vector3 right = centre - (Vector3)(perp * tileSize);
 
         var tc = SpawnTile(centre, tileSize);
