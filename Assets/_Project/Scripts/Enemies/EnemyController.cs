@@ -221,7 +221,7 @@ public class EnemyController : MonoBehaviour
         Vector2 perp = new Vector2(-fwd.y, fwd.x);
 
         Vector3 centre = transform.position + (Vector3)(fwd  * tileSize * 1.8f);
-        Vector3 left = centre +     (Vector3)(perp * tileSize);
+        Vector3 left = centre + (Vector3)(perp * tileSize);
         Vector3 right = centre - (Vector3)(perp * tileSize);
 
         var tc = SpawnTile(centre, tileSize);
@@ -269,13 +269,13 @@ public class EnemyController : MonoBehaviour
 
         if (arrowPrefab != null)
         {
-            var go   = Instantiate(arrowPrefab, transform.position, Quaternion.identity);
+            var go = Instantiate(arrowPrefab, transform.position, Quaternion.identity);
             var proj = go.GetComponent<ArrowProjectile>() ?? go.AddComponent<ArrowProjectile>();
             proj.Init(fwd, stats.arrowSpeed, GetActualAttackDamage(), GetActualAttackDamage(), gameObject, wasPossessed);
         }
         else
         {
-            var go   = new GameObject("Arrow_fallback");
+            var go = new GameObject("Arrow_fallback");
             go.transform.position = transform.position;
             var proj = go.AddComponent<ArrowProjectile>();
             proj.Init(fwd, stats.arrowSpeed, GetActualAttackDamage(), GetActualAttackDamage(), gameObject, wasPossessed);
@@ -306,7 +306,7 @@ public class EnemyController : MonoBehaviour
     private IEnumerator BossComboAttack()
     {
         _anim?.PlayAttack();
-        Vector2 fwd  = _ai.FacingDirection;
+        Vector2 fwd = _ai.FacingDirection;
         Vector2 perp = new Vector2(-fwd.y, fwd.x);
 
         yield return new WaitForSeconds(0.25f); 

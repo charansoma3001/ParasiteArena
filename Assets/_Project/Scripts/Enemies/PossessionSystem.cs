@@ -4,14 +4,20 @@ public class PossessionSystem : MonoBehaviour
 {
     public static PossessionSystem Instance { get; private set; }
 
-    public bool IsPossessing   { get; private set; }
+    public bool IsPossessing { get; private set; }
     public EnemyController PossessedEnemy { get; private set; }
+
+    [Header("Possession Cooldown")]
+    [Tooltip("Seconds the player must wait after leaving a host before possessing again.")]
+    public float possessionCooldown = 3f;
+
+    public float CooldownRemaining { get; private set; }
 
     private Transform _player;
 
     public float BonusPossessionTime { get; private set; }
-    public float HostDecayRate       { get; private set; } = 1f;
-    public float PlayerAttackDamage  { get; private set; }
+    public float HostDecayRate { get; private set; } = 1f;
+    public float PlayerAttackDamage { get; private set; }
 
     public static event System.Action<bool, EnemyController> OnPossessionChanged;
 
@@ -25,13 +31,25 @@ public class PossessionSystem : MonoBehaviour
     {
         var go = GameObject.FindWithTag("Player");
         if (go) _player = go.transform;
-        else Debug.LogWarning("[PossessionSystem] No 'Player' tagged object found.");
+        else Debug.LogWarning("PossessionSystem : No 'Player' tagged object found.");
+    }
+
+    private void Update()
+    {
+        if (CooldownRemaining > 0f)
+            CooldownRemaining = Mathf.Max(0f, CooldownRemaining - Time.deltaTime);
     }
 
     public bool TryPossessTarget(EnemyController target)
     {
+        if (CooldownRemaining > 0f)
+        {
+            return false;
+        }
+
         if (IsPossessing) return false;
         if (target == null || target.IsDead || target.IsPossessed || target.stats.isBoss) return false;
+
         BeginPossession(target);
         return true;
     }
@@ -51,11 +69,15 @@ public class PossessionSystem : MonoBehaviour
     public void EndPossession()
     {
         if (!IsPossessing) return;
-        var released   = PossessedEnemy;
-        IsPossessing   = false;
+
+        var released = PossessedEnemy;
+        IsPossessing = false;
         PossessedEnemy = null;
+
         released.SetState(EnemyController.EnemyState.Chasing);
         OnPossessionChanged?.Invoke(false, released);
+
+        CooldownRemaining = possessionCooldown;
     }
 
     public void MovePossessedEnemy(Vector2 cardinalDir)
@@ -70,7 +92,7 @@ public class PossessionSystem : MonoBehaviour
 
     private void BeginPossession(EnemyController target)
     {
-        IsPossessing   = true;
+        IsPossessing = true;
         PossessedEnemy = target;
         target.SetState(EnemyController.EnemyState.Possessed);
         _player?.GetComponent<PlayerController>()?.OnPossessionStart(target);

@@ -73,23 +73,23 @@ public class ExecutionerBossController : MonoBehaviour
     private float _baseStepCooldown;
     private float _baseAttackCooldown;
 
-    private bool  _transitioning;
-    private int   _activeSpirits;
+    private bool _transitioning;
+    private int _activeSpirits;
 
-    private bool  _summonLoopRunning;
-    private bool  _skill1LoopRunning;
+    private bool _summonLoopRunning;
+    private bool _skill1LoopRunning;
 
     private void Awake()
     {
         _ctrl = GetComponent<EnemyController>();
-        _ai   = GetComponent<EnemyAI>();
+        _ai = GetComponent<EnemyAI>();
         _anim = GetComponentInChildren<EnemyAnimator>();
     }
 
     private void Start()
     {
-        _baseStepDuration   = _ai.stepDuration;
-        _baseStepCooldown   = _ai.stepCooldown;
+        _baseStepDuration = _ai.stepDuration;
+        _baseStepCooldown = _ai.stepCooldown;
         _baseAttackCooldown = _ctrl.stats.attackCooldown;
 
         StartCoroutine(SummonLoop());
@@ -133,7 +133,7 @@ public class ExecutionerBossController : MonoBehaviour
     private IEnumerator EscalateTo(int phase)
     {
         _transitioning = true;
-        CurrentPhase   = phase;
+        CurrentPhase = phase;
 
         _ctrl.SetState(EnemyController.EnemyState.Stunned);
         
@@ -160,18 +160,18 @@ public class ExecutionerBossController : MonoBehaviour
         switch (phase)
         {
             case 1:
-                _ai.stepDuration           = _baseStepDuration;
-                _ai.stepCooldown           = _baseStepCooldown;
+                _ai.stepDuration = _baseStepDuration;
+                _ai.stepCooldown = _baseStepCooldown;
                 _ctrl.stats.attackCooldown = _baseAttackCooldown;
                 break;
             case 2:
-                _ai.stepDuration           = _baseStepDuration   * p2StepDurationMult;
-                _ai.stepCooldown           = _baseStepCooldown   * p2StepCooldownMult;
+                _ai.stepDuration = _baseStepDuration * p2StepDurationMult;
+                _ai.stepCooldown = _baseStepCooldown * p2StepCooldownMult;
                 _ctrl.stats.attackCooldown = _baseAttackCooldown * p2AttackCooldownMult;
                 break;
             case 3:
-                _ai.stepDuration           = _baseStepDuration   * p3StepDurationMult;
-                _ai.stepCooldown           = _baseStepCooldown   * p3StepCooldownMult;
+                _ai.stepDuration = _baseStepDuration   * p3StepDurationMult;
+                _ai.stepCooldown = _baseStepCooldown * p3StepCooldownMult;
                 _ctrl.stats.attackCooldown = _baseAttackCooldown * p3AttackCooldownMult;
                 break;
         }
@@ -216,9 +216,9 @@ public class ExecutionerBossController : MonoBehaviour
         int toSpawn = Mathf.Min(spiritsPerSummon, maxSpirits - _activeSpirits);
         Vector2[] offsets =
         {
-            Vector2.up    * _ai.tileSize * 1.5f,
-            Vector2.down  * _ai.tileSize * 1.5f,
-            Vector2.left  * _ai.tileSize * 1.5f,
+            Vector2.up * _ai.tileSize * 1.5f,
+            Vector2.down * _ai.tileSize * 1.5f,
+            Vector2.left * _ai.tileSize * 1.5f,
             Vector2.right * _ai.tileSize * 1.5f,
         };
 
