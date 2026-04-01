@@ -307,6 +307,22 @@ PrefabInstance:
       propertyPath: m_Name
       value: Canvas
       objectReference: {fileID: 0}
+    - target: {fileID: 2627534717777246636, guid: 9b3ae4a6c4adc4ca09b1424dcc2e848c,
+        type: 3}
+      propertyPath: bossWave
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2627534717777246636, guid: 9b3ae4a6c4adc4ca09b1424dcc2e848c,
+        type: 3}
+      propertyPath: bossPrefab
+      value: 
+      objectReference: {fileID: 3444035077216307306, guid: 380f983b73b19764ab764cffdc15c855,
+        type: 3}
+    - target: {fileID: 2627534717777246636, guid: 9b3ae4a6c4adc4ca09b1424dcc2e848c,
+        type: 3}
+      propertyPath: timePerWave
+      value: 30
+      objectReference: {fileID: 0}
     - target: {fileID: 6785179873068699237, guid: 9b3ae4a6c4adc4ca09b1424dcc2e848c,
         type: 3}
       propertyPath: m_Pivot.x

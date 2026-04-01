@@ -9,7 +9,6 @@ public class GameManager : MonoBehaviour
 
     public string mainMenuScene = "01_MainMenu";
     public string gameScene = "Sandbox_Charan";
-
     public string GameWinScene = "03_GameWin";
 
     // PLAY BUTTON

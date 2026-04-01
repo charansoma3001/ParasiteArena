@@ -127,7 +127,14 @@ public class ExecutionerBossController : MonoBehaviour
 
         AudioManager.Instance?.PlayGameWin();
         
-        GameManager.Instance?.LoadWinScreen();
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.LoadWinScreen();
+        }
+        else
+        {
+            UnityEngine.SceneManagement.SceneManager.LoadScene("03_GameWin");
+        }
     }
 
     private IEnumerator EscalateTo(int phase)
