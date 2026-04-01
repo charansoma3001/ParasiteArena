@@ -127,7 +127,7 @@ public class ExecutionerBossController : MonoBehaviour
 
         AudioManager.Instance?.PlayGameWin();
         
-        GameManager.Instance?.LoadMainMenu();
+        GameManager.Instance?.LoadWinScreen();
     }
 
     private IEnumerator EscalateTo(int phase)
