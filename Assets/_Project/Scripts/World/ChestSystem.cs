@@ -19,7 +19,7 @@ public class ChestSystem : MonoBehaviour
     public AudioClip openSfx;
 
     private bool hasBeenOpened = false;
-    private PlayerController _player;
+    private PlayerController player;
 
 
     // Gagan will call this function 
@@ -66,13 +66,13 @@ public class ChestSystem : MonoBehaviour
         {
             // Drop a Heal (Placeholder until Gagan builds the Player Health system)
             chestMessage = "You found a Health Potion!";
-            if (_player == null)
+            if (player == null)
             {
-                _player = FindFirstObjectByType<PlayerController>();
+                player = FindFirstObjectByType<PlayerController>();
             }
-            if (_player != null)
+            if (player != null)
             {
-                _player.Heal(25);
+                player.Heal(25);
             }
         }
 

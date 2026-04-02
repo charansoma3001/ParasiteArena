@@ -39,7 +39,7 @@ public class EnemyController : MonoBehaviour
     private GameObject possessedIndicator;
     private Collider2D col;
 
-    private readonly List<GameObject> _activeTiles = new();
+    private readonly List<GameObject> activeTiles = new();
 
     public static event System.Action<EnemyController> OnEnemyDied;
     public static event System.Action<EnemyController> OnPossessionStart;
@@ -418,15 +418,15 @@ public class EnemyController : MonoBehaviour
         if (!attackTilePrefab) return null;
         var t = Instantiate(attackTilePrefab, pos, Quaternion.identity);
         t.transform.localScale = Vector3.one * size;
-        _activeTiles.Add(t);
+        activeTiles.Add(t);
         return t;
     }
 
     private void ClearActiveTiles()
     {
-        foreach (var t in _activeTiles)
+        foreach (var t in activeTiles)
             if (t) Destroy(t); 
-        _activeTiles.Clear();
+        activeTiles.Clear();
         AttackTileActive = false;
     }
 
