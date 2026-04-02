@@ -32,12 +32,12 @@ public class EnemyController : MonoBehaviour
     public bool IsDead => CurrentState == EnemyState.Dead;
     public bool AttackTileActive { get; private set; }
 
-    private EnemyAI _ai;
-    private EnemyAnimator _anim;
-    private float _atkCooldown;
-    private float _possessionTimer;
-    private GameObject _possessedIndicator;
-    private Collider2D _col;
+    private EnemyAI ai;
+    private EnemyAnimator anim;
+    private float atkCooldown;
+    private float possessionTimer;
+    private GameObject possessedIndicator;
+    private Collider2D col;
 
     private readonly List<GameObject> _activeTiles = new();
 
@@ -47,9 +47,9 @@ public class EnemyController : MonoBehaviour
 
     private void Awake()
     {
-        _ai = GetComponent<EnemyAI>();
-        _col = GetComponent<Collider2D>();
-        _anim = GetComponentInChildren<EnemyAnimator>();
+        ai = GetComponent<EnemyAI>();
+        col = GetComponent<Collider2D>();
+        anim = GetComponentInChildren<EnemyAnimator>();
     }
 
     private void Start()
@@ -62,8 +62,8 @@ public class EnemyController : MonoBehaviour
     {
         if (overrideStats != null) stats = overrideStats;
         CurrentHP = stats.maxHealth;
-        _atkCooldown = 0f;
-        _possessionTimer = 0f;
+        atkCooldown = 0f;
+        possessionTimer = 0f;
         AttackTileActive = false;
         SetState(EnemyState.Idle);
     }
@@ -71,13 +71,13 @@ public class EnemyController : MonoBehaviour
     private void Update()
     {
         if (CurrentState == EnemyState.Dead) return;
-        _atkCooldown -= Time.deltaTime;
+        atkCooldown -= Time.deltaTime;
 
         if (CurrentState == EnemyState.Possessed)
         {
             float decayRate = PossessionSystem.Instance != null ? PossessionSystem.Instance.HostDecayRate : 1f;
-            _possessionTimer -= Time.deltaTime * decayRate;
-            if (_possessionTimer <= 0f)
+            possessionTimer -= Time.deltaTime * decayRate;
+            if (possessionTimer <= 0f)
                 PossessionSystem.Instance?.EndPossession();
         }
     }
@@ -95,16 +95,16 @@ public class EnemyController : MonoBehaviour
         switch (s)
         {
             case EnemyState.Idle:
-                _ai.StopMovement();
-                _anim?.PlayIdle();
+                ai.StopMovement();
+                anim?.PlayIdle();
                 break;
 
             case EnemyState.Roaming:
-                _ai.BeginRoam();
+                ai.BeginRoam();
                 break;
 
             case EnemyState.Chasing:
-                _ai.BeginChase();
+                ai.BeginChase();
                 break;
 
             case EnemyState.Attacking:
@@ -114,21 +114,21 @@ public class EnemyController : MonoBehaviour
             case EnemyState.Possessed:
                 StopAllCoroutines();
                 ClearActiveTiles();
-                _atkCooldown = 0f;
-                _ai.StopMovement();
-                _anim?.PlayIdle();
-                _possessionTimer = stats.possessionDuration + (PossessionSystem.Instance != null ? PossessionSystem.Instance.BonusPossessionTime : 0f);
+                atkCooldown = 0f;
+                ai.StopMovement();
+                anim?.PlayIdle();
+                possessionTimer = stats.possessionDuration + (PossessionSystem.Instance != null ? PossessionSystem.Instance.BonusPossessionTime : 0f);
                 if (possessedIndicatorPrefab)
                 {
-                    _possessedIndicator = Instantiate(possessedIndicatorPrefab,
+                    possessedIndicator = Instantiate(possessedIndicatorPrefab,
                                                       transform.position, Quaternion.identity, transform);
-                    _possessedIndicator.transform.localPosition = Vector3.up * (tileSize * 2.5f);
+                    possessedIndicator.transform.localPosition = Vector3.up * (tileSize * 2.5f);
                 }
                 OnPossessionStart?.Invoke(this);
                 break;
 
             case EnemyState.Stunned:
-                _ai.StopMovement();
+                ai.StopMovement();
                 break;
 
             case EnemyState.Dead:
@@ -141,14 +141,14 @@ public class EnemyController : MonoBehaviour
     {
         if (s == EnemyState.Possessed)
         {
-            if (_possessedIndicator) Destroy(_possessedIndicator);
+            if (possessedIndicator) Destroy(possessedIndicator);
             OnPossessionEnd?.Invoke(this);
         }
     }
 
     public void TriggerAttack()
     {
-        if (_atkCooldown > 0f || CurrentState == EnemyState.Attacking) return;
+        if (atkCooldown > 0f || CurrentState == EnemyState.Attacking) return;
         SetState(EnemyState.Attacking);
     }
 
@@ -160,10 +160,10 @@ public class EnemyController : MonoBehaviour
 
     private IEnumerator PerformAttack()
     {
-        _atkCooldown = stats.attackCooldown;
+        atkCooldown = stats.attackCooldown;
         yield return StartCoroutine(RunAttackForType(stats.enemyType));
         if (CurrentState == EnemyState.Attacking)
-            SetState(_ai.GetResumeState());
+            SetState(ai.GetResumeState());
     }
 
     public float GetActualAttackDamage(float baseDamage = -1f)
@@ -178,14 +178,14 @@ public class EnemyController : MonoBehaviour
 
     public bool UsePossessedAbility()
     {
-        if (_atkCooldown > 0f) return false;
+        if (atkCooldown > 0f) return false;
         StartCoroutine(PossessedAttack());
         return true;
     }
 
     private IEnumerator PossessedAttack()
     {
-        _atkCooldown = stats.attackCooldown;
+        atkCooldown = stats.attackCooldown;
         yield return StartCoroutine(RunAttackForType(stats.enemyType));
     }
 
@@ -216,8 +216,8 @@ public class EnemyController : MonoBehaviour
 
     private IEnumerator SwordAttack()
     {
-        _anim?.PlayAttack();
-        Vector2 fwd = _ai.FacingDirection;
+        anim?.PlayAttack();
+        Vector2 fwd = ai.FacingDirection;
         Vector2 perp = new Vector2(-fwd.y, fwd.x);
 
         Vector3 centre = transform.position + (Vector3)(fwd  * tileSize * 1.8f);
@@ -243,14 +243,14 @@ public class EnemyController : MonoBehaviour
         yield return new WaitForSeconds(0.2f);
         if (tc) Destroy(tc); if (tl) Destroy(tl); if (tr) Destroy(tr);
         AttackTileActive = false;
-        _anim?.PlayIdle();
+        anim?.PlayIdle();
     }
 
     private IEnumerator ArcherAttack()
     {
-        _anim?.PlayAttack();
+        anim?.PlayAttack();
 
-        Vector2 fwd = _ai.FacingDirection;
+        Vector2 fwd = ai.FacingDirection;
         bool wasPossessed = IsPossessed;
         int range = stats.arrowRange > 0 ? stats.arrowRange : 6;
 
@@ -282,13 +282,13 @@ public class EnemyController : MonoBehaviour
         }
 
         yield return new WaitForSeconds(0.15f);
-        _anim?.PlayIdle();
+        anim?.PlayIdle();
     }
 
     private IEnumerator BiteAttack()
     {
-        _anim?.PlayAttack();
-        Vector3 bitePos = transform.position + (Vector3)(_ai.FacingDirection * tileSize * 1.0f);
+        anim?.PlayAttack();
+        Vector3 bitePos = transform.position + (Vector3)(ai.FacingDirection * tileSize * 1.0f);
         var tile = SpawnTile(bitePos, tileSize * 0.9f);
         AttackTileActive = true;
 
@@ -300,13 +300,13 @@ public class EnemyController : MonoBehaviour
         yield return new WaitForSeconds(0.1f);
         if (tile) Destroy(tile);
         AttackTileActive = false;
-        _anim?.PlayIdle();
+        anim?.PlayIdle();
     }
 
     private IEnumerator BossComboAttack()
     {
-        _anim?.PlayAttack();
-        Vector2 fwd = _ai.FacingDirection;
+        anim?.PlayAttack();
+        Vector2 fwd = ai.FacingDirection;
         Vector2 perp = new Vector2(-fwd.y, fwd.x);
 
         yield return new WaitForSeconds(0.25f); 
@@ -348,7 +348,7 @@ public class EnemyController : MonoBehaviour
 
         if (t2) Destroy(t2); if (t3) Destroy(t3); if (t4) Destroy(t4);
         AttackTileActive = false;
-        _anim?.PlayIdle();
+        anim?.PlayIdle();
     }
 
 
@@ -374,7 +374,7 @@ public class EnemyController : MonoBehaviour
         if (hitSfx != null && AudioManager.Instance != null)
             AudioManager.Instance.PlaySFXAtPos(hitSfx, transform.position);
             
-        _anim?.PlayHit();
+        anim?.PlayHit();
         StartCoroutine(ResumeAfterHit());
         if (CurrentHP <= 0f) SetState(EnemyState.Dead);
     }
@@ -382,7 +382,7 @@ public class EnemyController : MonoBehaviour
     private IEnumerator ResumeAfterHit()
     {
         yield return new WaitForSeconds(0.25f);
-        if (!IsDead && !IsPossessed) _anim?.PlayIdle();
+        if (!IsDead && !IsPossessed) anim?.PlayIdle();
     }
 
     private void HandleDeath()
@@ -392,9 +392,9 @@ public class EnemyController : MonoBehaviour
             PossessionSystem.Instance.PossessedEnemy == this)
             PossessionSystem.Instance.EndPossession();
 
-        _ai.StopMovement();
-        _col.enabled = false;
-        _anim?.PlayDeath();
+        ai.StopMovement();
+        col.enabled = false;
+        anim?.PlayDeath();
         if (deathSfx != null)
         {
             if (AudioManager.Instance != null)

@@ -4,12 +4,12 @@ using UnityEngine.SceneManagement;
 
 public class StatManager : MonoBehaviour
 {
-    // 1. Singleton Setup
+    // Singleton Setup
     public static StatManager Instance { get; private set; }
     private PlayerController playerController;
     public event System.Action OnStatsChanged;
 
-    // 2. A mini-class to set up starting values in the Unity Inspector
+    // A mini-class to set up starting values in the Unity Inspector
     [System.Serializable]
     public class BaseStat
     {
@@ -20,13 +20,13 @@ public class StatManager : MonoBehaviour
     [Header("Base Player Stats (Edit in Inspector)")]
     public List<BaseStat> startingStats;
 
-    // 3. The list of all upgrades the player has collected this run
+    // The list of all upgrades the player has collected this run
     private List<UpgradeData> activeUpgrades = new List<UpgradeData>();
 
-    // 4. The final, calculated numbers ready to be used by the game
+    // The final, calculated numbers ready to be used by the game
     private Dictionary<StatType, float> currentStats = new Dictionary<StatType, float>();
 
-    private void Awake()
+    private void Awake() //sets up the singleton and calculates starting stats
     {
         if (Instance != null && Instance != this)
         {
@@ -40,10 +40,7 @@ public class StatManager : MonoBehaviour
         RecalculateStats(); 
     }
 
-    // --- UPGRADE LOGIC ---
-
-    // Call this when the player buys something from the shop or opens a chest
-    public void AddUpgrade(UpgradeData newUpgrade)
+    public void AddUpgrade(UpgradeData newUpgrade) // saves a new upgrade and updates stats.
     {
         activeUpgrades.Add(newUpgrade);
         RecalculateStats(); 
@@ -54,13 +51,13 @@ public class StatManager : MonoBehaviour
     {
         currentStats.Clear();
 
-        // Step 1: Set everything to their base values
+        // Set everything to their base values
         foreach (var stat in startingStats)
         {
             currentStats[stat.statType] = stat.baseValue;
         }
 
-        // Step 2: Apply all FLAT additions first
+        // Apply all FLAT additions first
         foreach (var upgrade in activeUpgrades)
         {
             // We added an inner loop to check every modifier on the item!
@@ -73,7 +70,7 @@ public class StatManager : MonoBehaviour
             }
         }
 
-        // Step 3: Apply all MULTIPLIERS second
+        // Apply all MULTIPLIERS second
         foreach (var upgrade in activeUpgrades)
         {
             foreach (var mod in upgrade.statModifiers)
@@ -130,10 +127,8 @@ public class StatManager : MonoBehaviour
         }
     }
 
-    // --- HOW THE REST OF THE TEAM GETS THE STATS ---
-
     // Gagan and Terry will call this function!
-    public float GetStat(StatType stat)
+    public float GetStat(StatType stat) // lets other scripts ask for a stat value
     {
         if (currentStats.ContainsKey(stat))
         {

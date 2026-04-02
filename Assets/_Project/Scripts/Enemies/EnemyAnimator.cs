@@ -8,23 +8,23 @@ public class EnemyAnimator : MonoBehaviour
     public string attackState = "Attack1";
     public string hitState = "Hit";
     public string deathState = "Hit";
-    private Animator _anim;
-    private SpriteRenderer _spriteRenderer;
-    private string _current;
+    private Animator anim;
+    private SpriteRenderer spriteRenderer;
+    private string current;
 
     private void Awake()
     {
-        _anim = GetComponent<Animator>();
-        _spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        anim = GetComponent<Animator>();
+        spriteRenderer = GetComponentInChildren<SpriteRenderer>();
     }
 
     public void Play(string state)
     {
-        if (_anim == null || state == _current) return;
-        if (_anim.HasState(0, Animator.StringToHash(state)))
+        if (anim == null || state == current) return;
+        if (anim.HasState(0, Animator.StringToHash(state)))
         {
-            _anim.Play(state, 0, 0f);
-            _current = state;
+            anim.Play(state, 0, 0f);
+            current = state;
         }
     }
 
@@ -36,15 +36,15 @@ public class EnemyAnimator : MonoBehaviour
 
     public void TickMovement(bool isMoving)
     {
-        if (_current == attackState || _current == hitState) return;
+        if (current == attackState || current == hitState) return;
         if (isMoving) PlayWalk();
         else PlayIdle();
     }
 
     public void SetFacing(Vector2 dir)
     {
-        if (_spriteRenderer == null) return;
-        if (dir.x > 0.1f)  _spriteRenderer.flipX = false;
-        else if (dir.x < -0.1f) _spriteRenderer.flipX = true;
+        if (spriteRenderer == null) return;
+        if (dir.x > 0.1f)  spriteRenderer.flipX = false;
+        else if (dir.x < -0.1f) spriteRenderer.flipX = true;
     }
 }

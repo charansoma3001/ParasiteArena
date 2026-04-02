@@ -22,15 +22,15 @@ public class EnemySpawner : MonoBehaviour
     [Tooltip("How many random positions to try")]
     public int maxSpawnAttempts = 20;
 
-    private Transform _player;
-    private float _timer;
-    private bool _spawning;
-    private int _spawnedThisWave;
+    private Transform player;
+    private float timer;
+    private bool spawning;
+    private int spawnedThisWave;
 
     private void Start()
     {
         var playerGO = GameObject.FindWithTag("Player");
-        if (playerGO) _player = playerGO.transform;
+        if (playerGO) player = playerGO.transform;
 
         if (WaveManager.Instance != null)
         {
@@ -50,27 +50,27 @@ public class EnemySpawner : MonoBehaviour
 
     private void OnWaveStarted(int waveNumber)
     {
-        _spawning = true;
-        _timer = 0f;
-        _spawnedThisWave = 0;
+        spawning = true;
+        timer = 0f;
+        spawnedThisWave = 0;
     }
 
     private void OnWaveEnded()
     {
-        _spawning = false;
+        spawning = false;
     }
 
     private void Update()
     {
-        if (!_spawning) return;
-        if (_spawnedThisWave >= enemiesPerWave) return;
+        if (!spawning) return;
+        if (spawnedThisWave >= enemiesPerWave) return;
 
-        _timer += Time.deltaTime;
-        if (_timer >= spawnInterval)
+        timer += Time.deltaTime;
+        if (timer >= spawnInterval)
         {
-            _timer = 0f;
+            timer = 0f;
             SpawnEnemy();
-            _spawnedThisWave++;
+            spawnedThisWave++;
         }
     }
 
@@ -90,8 +90,8 @@ public class EnemySpawner : MonoBehaviour
 
     private Vector2 GetSpawnPosition()
     {
-        Vector2 origin = _player != null
-            ? (Vector2)_player.position
+        Vector2 origin = player != null
+            ? (Vector2)player.position
             : Vector2.zero;
         MapManager map = MapManager.Instance;
         if (map == null)

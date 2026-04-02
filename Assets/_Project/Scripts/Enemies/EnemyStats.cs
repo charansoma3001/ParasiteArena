@@ -34,7 +34,6 @@ public class EnemyStats : ScriptableObject
     public int arrowRange = 6;
 
     [Header("Rat")]
-    [Tooltip("Seconds the rat waits after spotting the player before charging.")]
     public float alertDelay = 0.8f;
 
     [Header("Spawner")]
