@@ -22,8 +22,8 @@ public class ChestSystem : MonoBehaviour
     private PlayerController _player;
 
 
-    // --- INTEGRATION: Gagan will call this function ---
-    // When the player walks up to the chest and presses 'E', Gagan's script 
+    // Gagan will call this function 
+    // When the player walks up to the chest and presses 'C', Gagan's script 
     // will look for this ChestSystem component and trigger OpenChest().
     public void OpenChest()
     {
@@ -81,9 +81,6 @@ public class ChestSystem : MonoBehaviour
         }
 
         ShowMessageHUD(chestMessage);
-
-        // Optional: Change the sprite to an "open chest" image or destroy it
-        // Destroy(gameObject, 0.5f); 
     }
 
     private void ShowMessageHUD(string message)

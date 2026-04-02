@@ -51,33 +51,33 @@ public class MapManager : MonoBehaviour
      //Set to 0 for a random seed each play
     public int seed = 0;
 
-    //parent transforms for editor hierarchy organisation.
+    //parent transforms for editor hierarchy organisation
     private Transform groundParent;
     private Transform vegetationParent;
     private Transform chestParent;
     private Transform enemiesParent;
 
-    //query terrain type without re-computing noise.
+    //query terrain type without re-computing noise
     private float[,] noiseMap;
 
-    // Tracks world positions of already-placed chests so we can enforce the minimum separation constraint during generation.
+    // Tracks world positions of already-placed chests so we can enforce the minimum separation constraint during generation
     private System.Collections.Generic.List<Vector2> placedChestPositions = new System.Collections.Generic.List<Vector2>();
 
-    //Returns the noise value [0,1] at tile coordinate (x, y).
+    //Returns the noise value [0,1] at tile coordinate (x, y)
     public float GetNoiseValue(int x, int y)
     {
         if (noiseMap == null) return 0f;
-        x = Mathf.Clamp(x, 0, width - 1);
-        y = Mathf.Clamp(y, 0, height - 1);
-        return noiseMap[x, y];
+            x = Mathf.Clamp(x, 0, width - 1);
+            y = Mathf.Clamp(y, 0, height - 1);
+            return noiseMap[x, y];
     }
 
-    //Returns the TerrainType at tile coordinate (x, y).
+    //Returns the TerrainType at tile coordinate (x, y)
     public TerrainType GetTerrainType(int x, int y)
     {
         float v = GetNoiseValue(x, y);
         if (IsProtectedCell(x, y)) return TerrainType.Grass;
-        if (v >= treeThreshold)      return TerrainType.Tree;
+        if (v >= treeThreshold) return TerrainType.Tree;
         if (v >= highGrassThreshold) return TerrainType.HighGrass;
         return TerrainType.Grass;
     }
@@ -85,25 +85,22 @@ public class MapManager : MonoBehaviour
     //World-space centre of the map
     public Vector2 MapCentre => new Vector2(width * 0.5f, height * 0.5f);
 
-    // Returns the world-space Bounds that enemy spawners should treat as the
-    // playable area.  The border clear strip is excluded on every side so
-    // spawns always land on tiles that actually exist in the noise map.
-    // An extra one-tile inset is added on top of borderClearWidth so enemies
-    // never appear right at the hard edge of the vegetation border.
+    // excludes the outer border strip and adds an extra one-tile margin, 
+    // so enemies only spawn inside valid map tiles and not too close to the map’s edge
     public Bounds GetPlayableBounds()
     {
         int inset = borderClearWidth + 1;
         float minX = inset;
         float minY = inset;
-        float maxX = width  - inset;
+        float maxX = width - inset;
         float maxY = height - inset;
         Vector3 centre = new Vector3((minX + maxX) * 0.5f, (minY + maxY) * 0.5f, 0f);
         Vector3 size   = new Vector3(maxX - minX, maxY - minY, 0f);
         return new Bounds(centre, size);
     }
 
-    // Returns true when a world-space position lies within the playable tile grid.
-    // Uses the same inset as GetPlayableBounds so the two are always consistent.
+    // Returns true when a world-space position lies within the playable tile grid
+    // Same as GetPlayableBounds so the two are always consistent
     public bool IsInsidePlayableArea(Vector2 worldPos)
     {
         return GetPlayableBounds().Contains(new Vector3(worldPos.x, worldPos.y, 0f));
@@ -121,20 +118,20 @@ public class MapManager : MonoBehaviour
     }
     private void GenerateMap()
     {
-        // Resolve seed.
+        // Resolve seed
         int resolvedSeed = (seed == 0) ? Random.Range(1, int.MaxValue) : seed;
         Random.InitState(resolvedSeed);
 
-        // Build parent objects for clean hierarchy.
-        groundParent     = CreateParent("Ground");
+        // Build parent objects for clean hierarchy
+        groundParent = CreateParent("Ground");
         vegetationParent = CreateParent("Vegetation");
-        chestParent      = CreateParent("Chests");
-        enemiesParent    = CreateParent("Enemies");
+        chestParent= CreateParent("Chests");
+        enemiesParent= CreateParent("Enemies");
 
-        // Clear chest position cache for reproducible placement.
+        // Clear chest position cache for reproducible placement
         placedChestPositions.Clear();
 
-        // Generate the fractal noise map.
+        // Generate the fractal noise map
         noiseMap = BuildNoiseMap(resolvedSeed);
 
         // Place tiles.
@@ -146,20 +143,21 @@ public class MapManager : MonoBehaviour
             }
         }
 
-        // Chest pass runs after all tiles are placed so terrain type queries are reliable and we have a complete picture of valid spawn cells.
+        // Chest pass runs after all tiles are placed so terrain type queries are reliable 
+        // and we have a complete picture of valid spawn cells
         SpawnRareChests();
     }
 
     private void PlaceTile(int x, int y)
     {
-        // Base position on the 2D XY plane (z = 0).
+        // Base position on the 2D XY plane (z = 0)
         Vector3 basePos = new Vector3(x, y, 0f);
 
-        // Always place a grass ground tile.
+        // Always place a grass ground tile
         if (grassPrefab != null)
             Instantiate(grassPrefab, basePos, Quaternion.identity, groundParent);
 
-        // Skip vegetation in protected cells.
+        // Skip vegetation in protected cells
         if (IsProtectedCell(x, y)) return;
 
         float noiseValue = noiseMap[x, y];
@@ -168,8 +166,7 @@ public class MapManager : MonoBehaviour
         {
             if (treePrefab != null)
             {
-                // Trees use tighter jitter — they are hard obstacles and
-                // visually large, so less offset looks more intentional.
+                // Trees use tighter jitter 
                 Vector3 jitter = RandomJitter(vegetationJitter * 0.5f);
                 Instantiate(treePrefab, basePos + jitter, Quaternion.identity, vegetationParent);
             }
@@ -311,8 +308,7 @@ public class MapManager : MonoBehaviour
     {
         float[,] map = new float[width, height];
 
-        // Unique per-octave offsets prevent octaves from aligning on the same
-        // features, which would create obvious repetition.
+        // Unique per-octave offsets prevent octaves from aligning on the same features
         System.Random prng = new System.Random(resolvedSeed);
         Vector2[] octaveOffsets = new Vector2[octaves];
         for (int i = 0; i < octaves; i++)
@@ -339,9 +335,8 @@ public class MapManager : MonoBehaviour
                     float sampleX = (x / (float)width)  * noiseScale * frequency + octaveOffsets[o].x;
                     float sampleY = (y / (float)height)  * noiseScale * frequency + octaveOffsets[o].y;
 
-                    // Mathf.PerlinNoise returns [0,1]; shift to [-1,1] so
-                    // positive and negative contributions can cancel, giving
-                    // genuine fBm character.
+                    // Mathf.PerlinNoise returns [0,1]; shift to [-1,1] so positive and negative contributions can cancel.
+                    // This gives genuine fBm character.
                     float perlinValue = Mathf.PerlinNoise(sampleX, sampleY) * 2f - 1f;
                     noiseHeight += perlinValue * amplitude;
 
@@ -368,15 +363,15 @@ public class MapManager : MonoBehaviour
     }
 
 
-    // Returns true when a tile should be forced to plain grass regardless of noise — the open centre combat arena and the border clearance strip.
+    // Returns true when a tile should be forced to plain grass regardless of noise.
     private bool IsProtectedCell(int x, int y)
     {
-        // Border strip.
+        // Border strip
         if (x < borderClearWidth || x >= width  - borderClearWidth ||
             y < borderClearWidth || y >= height - borderClearWidth)
             return true;
 
-        // Open centre circle.
+        // Open centre circle
         float dx = x - width  * 0.5f;
         float dy = y - height * 0.5f;
         return (dx * dx + dy * dy) < (openCentreRadius * openCentreRadius);

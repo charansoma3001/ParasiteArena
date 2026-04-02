@@ -26,7 +26,7 @@ public class RareChest : MonoBehaviour
             closedSprite = renderer.sprite;
     }
 
-    private void Update()
+    private void Update() // waits for the player to be nearby and press C
     {
         if (isOpen) return;
 
@@ -34,19 +34,19 @@ public class RareChest : MonoBehaviour
             OpenChest();
     }
 
-    private void OnTriggerEnter2D(Collider2D other)
+    private void OnTriggerEnter2D(Collider2D other) // detects when the player comes close
     {
         if (!isOpen && other.CompareTag("Player"))
             playerNearby = true;
     }
 
-    private void OnTriggerExit2D(Collider2D other)
+    private void OnTriggerExit2D(Collider2D other) //detects when the player moves away
     {
         if (other.CompareTag("Player"))
             playerNearby = false;
     }
 
-    private void OpenChest()
+    private void OpenChest() // opens the chest and makes all the changes
     {
         isOpen = true;
         playerNearby = false;
@@ -61,13 +61,6 @@ public class RareChest : MonoBehaviour
             chestSystem.OpenChest();
 
         OnChestOpened?.Invoke(transform.position);
-        // Debug.Log($"[RareChest] Opened at {transform.position}");
-
-        // UIManager uiManager = FindFirstObjectByType<UIManager>();
-        // if (uiManager != null)
-        // {
-        //     uiManager.ShowMessageHUD("Rare chest opened!");
-        // }
     }
 
 #if UNITY_EDITOR
