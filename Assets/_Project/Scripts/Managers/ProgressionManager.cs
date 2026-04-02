@@ -3,13 +3,13 @@ using System;
 
 public class ProgressionManager : MonoBehaviour
 {
-    // 1. The Singleton Instance
+    // Singleton Instance
     public static ProgressionManager Instance { get; private set; }
 
     [Header("Progression Stats")]
     public int CurrentLevel = 1;
     public int CurrentXP = 0;
-    public int XPToNextLevel = 100; // Base XP needed for level 2
+    public int XPToNextLevel = 100;
 
     [Header("Enemy Kill XP")]
     public int baseKillXP = 20;
@@ -22,10 +22,10 @@ public class ProgressionManager : MonoBehaviour
     [Header("Economy")]
     public int CurrentGold = 0;
 
-    // 2. The Events (Other scripts will listen to these)
-    public event Action<int, int> OnXPAdded;     // Broadcasts: (CurrentXP, XPToNextLevel)
-    public event Action<int> OnLevelUp;          // Broadcasts: (NewLevel)
-    public event Action<int> OnGoldChanged;      // Broadcasts: (CurrentGold)
+    // Events that other scripts will listen
+    public event Action<int, int> OnXPAdded;     
+    public event Action<int> OnLevelUp;          
+    public event Action<int> OnGoldChanged; 
 
     private void Update() 
     {
@@ -45,17 +45,17 @@ public class ProgressionManager : MonoBehaviour
 
     private void Awake()
     {
-        // Enforce the Singleton pattern
+        // Enforce Singleton again
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
             return;
         }
         Instance = this;
-        DontDestroyOnLoad(gameObject); // Keeps your manager alive when loading the Main Arena
+        DontDestroyOnLoad(gameObject); // this is to keep the manager alive
     }
 
-    // --- XP & LEVELING LOGIC ---
+    // levle up logic
 
     public void AddXP(int amount)
     {
@@ -66,7 +66,7 @@ public class ProgressionManager : MonoBehaviour
             LevelUp();
         }
 
-        // Announce to the rest of the game that XP changed (Gagan's UI will listen for this)
+        // announce for player to receive it
         OnXPAdded?.Invoke(CurrentXP, XPToNextLevel);
     }
 
@@ -87,22 +87,20 @@ public class ProgressionManager : MonoBehaviour
     private void LevelUp()
     {
         CurrentLevel++;
-        CurrentXP -= XPToNextLevel; // Carry over any excess XP
+        CurrentXP -= XPToNextLevel; // Carry over XP
 
-        // The Math Curve: Increase next level requirement by 50%
+        // to increase next level requirement by 50%
         XPToNextLevel = Mathf.RoundToInt(XPToNextLevel * 1.5f);
 
-        // Announce the level up! (Gagan's UI and Terry's enemy spawner will listen for this)
+        // Announce the level up
         OnLevelUp?.Invoke(CurrentLevel);
 
-        // Safety check: Did they gain enough XP to level up twice instantly?
+        // when player gains enough XP to level up twice instantly
         if (CurrentXP >= XPToNextLevel) 
         {
             LevelUp();
         }
     }
-
-    // --- ECONOMY LOGIC ---
 
     public void AddGold(int amount)
     {
@@ -116,10 +114,8 @@ public class ProgressionManager : MonoBehaviour
         {
             CurrentGold -= amount;
             OnGoldChanged?.Invoke(CurrentGold);
-            return true; // Purchase successful
+            return true;
         }
-        
-        Debug.Log("Not enough gold!");
-        return false; // Purchase failed
+        return false;
     }
 }

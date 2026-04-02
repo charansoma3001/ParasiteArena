@@ -9,7 +9,6 @@ public class Billboard : MonoBehaviour
     void LateUpdate()
     {
         // Makes the UI always face the camera
-        transform.LookAt(transform.position + mainCameraTransform.rotation * Vector3.forward,
-                         mainCameraTransform.rotation * Vector3.up);
+        transform.LookAt(transform.position + mainCameraTransform.rotation * Vector3.forward, mainCameraTransform.rotation * Vector3.up);
     }
 }

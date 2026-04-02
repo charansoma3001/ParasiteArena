@@ -6,13 +6,13 @@ public class AudioManager : MonoBehaviour
     public static AudioManager Instance { get; private set; }
 
     [Header("Audio Sources")]
-    [Tooltip("Global 2D AudioSource for background music loops.")]
+    [Tooltip("AudioSource for background music.")]
     public AudioSource musicSource;
-    [Tooltip("Global 2D AudioSource for non-spatialized SFX (like UI clicks).")]
+    [Tooltip("AudioSource for SFX (like UI clicks).")]
     public AudioSource sfxSource;
 
     [Header("Global Music")]
-    [Tooltip("The default background music to play upon scene start.")]
+    [Tooltip("The default background music to play.")]
     public AudioClip backgroundMusic;
 
     [Header("Game State SFX")]
@@ -23,7 +23,7 @@ public class AudioManager : MonoBehaviour
 
     private void Awake()
     {
-        // Enforce Singleton pattern and preserve across scenes
+        // This would be used to enforce a singleton pattern
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -46,8 +46,8 @@ public class AudioManager : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        // When a new scene loads, check if we should play/restart background music.
-        // This handles cases like restarting after death or playing from the main menu.
+        // When a new scene loads.
+        // This is to fix the issue of restarting music after death or playing from the main menu.
         if (backgroundMusic != null)
         {
             if (musicSource != null && !musicSource.isPlaying)
@@ -65,9 +65,6 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Plays background music as a 2D global track.
-    /// </summary>
     public void PlayMusic(AudioClip clip, bool loop = true)
     {
         if (musicSource == null || clip == null) return;
@@ -76,20 +73,12 @@ public class AudioManager : MonoBehaviour
         musicSource.Play();
     }
 
-    /// <summary>
-    /// Plays a sound effect globally (2D) without positional attenuation.
-    /// Useful for UI, level up tones, etc.
-    /// </summary>
     public void PlaySFX(AudioClip clip)
     {
         if (sfxSource == null || clip == null) return;
         sfxSource.PlayOneShot(clip);
     }
 
-    /// <summary>
-    /// Plays a 3D sound effect at a specific world position.
-    /// Note: This instantiates a temporary AudioSource object under the hood.
-    /// </summary>
     public void PlaySFXAtPos(AudioClip clip, Vector3 position, float volume = 1f)
     {
         if (clip == null) return;

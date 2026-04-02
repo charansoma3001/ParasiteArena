@@ -25,7 +25,7 @@ public class LevelUpRewardManager : MonoBehaviour
     private void LoadAllUpgrades()
     {
         #if UNITY_EDITOR
-        // In editor, use AssetDatabase to find all upgrades
+        // In editor, it would be best to use AssetDatabase to find all upgrades
         string[] guids = AssetDatabase.FindAssets("t:UpgradeData", new[] { "Assets/_Project/ScriptableObjects/Upgrades" });
         var allUpgrades = new List<UpgradeData>();
         
@@ -39,7 +39,7 @@ public class LevelUpRewardManager : MonoBehaviour
             }
         }
         #else
-        // At runtime, load from Resources folder
+        // load from Resources folder at runtime
         var allUpgrades = new List<UpgradeData>(Resources.LoadAll<UpgradeData>("ScriptableObjects/Upgrades"));
         #endif
         
@@ -53,15 +53,6 @@ public class LevelUpRewardManager : MonoBehaviour
                 allPossibleUpgrades.Add(upgrade);
             }
         }
-        
-        if (allPossibleUpgrades.Count == 0)
-        {
-            Debug.LogWarning("[LevelUpRewardManager] No upgrades with 1 stat modifier found!");
-        }
-        else
-        {
-            Debug.Log($"[LevelUpRewardManager] Loaded {allPossibleUpgrades.Count} upgrades with 1 stat modifier");
-        }
     }
 
     private void Start()
@@ -70,16 +61,12 @@ public class LevelUpRewardManager : MonoBehaviour
         {
             ProgressionManager.Instance.OnLevelUp += HandleLevelUp;
         }
-        else
-        {
-            Debug.LogError("[LevelUpRewardManager] ProgressionManager not found!");
-        }
     }
 
-    // 3. Move unsubscription to OnDisable for safer cleanup
+    // OnDisable will be used for safer cleanup
     private void OnDisable()
     {
-        // Only unsubscribe if THIS is the active instance (ignores duplicates destroyed in Awake)
+        // Only unsubscribe if its an active instance
         if (Instance == this && ProgressionManager.Instance != null)
         {
             ProgressionManager.Instance.OnLevelUp -= HandleLevelUp;
@@ -88,24 +75,12 @@ public class LevelUpRewardManager : MonoBehaviour
 
     private void HandleLevelUp(int newLevel)
     {
-
-        if (allPossibleUpgrades == null || allPossibleUpgrades.Count == 0)
-        {
-            Debug.LogError("[LevelUpRewardManager] No upgrades available!");
-            return;
-        }
-
         int randomIndex = Random.Range(0, allPossibleUpgrades.Count);
         UpgradeData selectedUpgrade = allPossibleUpgrades[randomIndex];
 
         if (StatManager.Instance != null)
         {
             StatManager.Instance.AddUpgrade(selectedUpgrade);
-        }
-        else
-        {
-            Debug.LogError("[LevelUpRewardManager] StatManager not found!");
-            return;
         }
 
         string levelUpMessage = $"Leveled Up: {selectedUpgrade.description}";

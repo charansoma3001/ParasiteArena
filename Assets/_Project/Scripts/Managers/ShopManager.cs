@@ -19,11 +19,11 @@ public class ShopManager : MonoBehaviour
     
     
     [Header("Shop Inventory Data")]
-    public List<UpgradeData> allPossibleUpgrades; // Drag all your ScriptableObjects here
-    private UpgradeData[] currentShopUpgrades = new UpgradeData[3]; // The 3 items currently for sale
+    public List<UpgradeData> allPossibleUpgrades;
+    private UpgradeData[] currentShopUpgrades = new UpgradeData[3]; 
 
     [Header("UI Panel Reference")]
-    public GameObject shopPanel; // The main UI window to toggle on/off
+    public GameObject shopPanel;
 
     [Header("Wave Button")]
     public Button startNextWaveButton;
@@ -48,13 +48,10 @@ public class ShopManager : MonoBehaviour
 
     private void Start()
     {
-        // Keep the shop closed when the game starts
         shopPanel.SetActive(false);
     }
 
-    // --- SHOP LOGIC ---
-
-    // The Wave Manager will call this when a wave ends!
+    // the Wave Manager will be called when a wave ends
     public void OpenShop()
     {
         Time.timeScale = 0f;
