@@ -38,13 +38,13 @@ public class UIManager : MonoBehaviour
     [Header("Wave Countdown")]
     public TextMeshProUGUI waveCountdownText;
 
-    private PlayerController _player;
-    private WaveManager _waveManager;
-    private bool _isWaveTimerSubscribed;
-    private Coroutine _messageHUDRoutine;
-    private Coroutine _controlsHUDRoutine;
-    private bool _isGamePaused;
-    private readonly Queue<QueuedHUDMessage> _messageQueue = new Queue<QueuedHUDMessage>();
+    private PlayerController player;
+    private WaveManager waveManager;
+    private bool isWaveTimerSubscribed;
+    private Coroutine messageHUDRoutine;
+    private Coroutine controlsHUDRoutine;
+    private bool isGamePaused;
+    private readonly Queue<QueuedHUDMessage> messageQueue = new Queue<QueuedHUDMessage>();
 
     private struct QueuedHUDMessage
     {
@@ -81,10 +81,10 @@ public class UIManager : MonoBehaviour
 
         TryInitializeWaveTimerUI();
 
-        _player = FindFirstObjectByType<PlayerController>();
+        player = FindFirstObjectByType<PlayerController>();
 
-        if (_player != null)
-            UpdateHealthUI(_player.CurrentHealth, _player.maxHealth);
+        if (player != null)
+            UpdateHealthUI(player.CurrentHealth, player.maxHealth);
 
         if (StatManager.Instance != null)
         {
@@ -113,7 +113,7 @@ public class UIManager : MonoBehaviour
     private void Update()
     {
         // Handle cases where WaveManager appears slightly later than this UI object.
-        if (!_isWaveTimerSubscribed)
+        if (!isWaveTimerSubscribed)
         {
             TryInitializeWaveTimerUI();
         }
@@ -127,38 +127,37 @@ public class UIManager : MonoBehaviour
     private void OnDestroy()
     {
         PlayerController.OnHealthChanged -= UpdateHealthUI;
-        if (_waveManager != null && _isWaveTimerSubscribed)
+        if (waveManager != null && isWaveTimerSubscribed)
         {
-            _waveManager.OnTimerChanged -= UpdateTimerUI;
-            _waveManager.OnCountdownChanged -= UpdateWaveCountdownUI;
+            waveManager.OnTimerChanged -= UpdateTimerUI;
+            waveManager.OnCountdownChanged -= UpdateWaveCountdownUI;
         }
 
-        if (_messageHUDRoutine != null)
+        if (messageHUDRoutine != null)
         {
-            StopCoroutine(_messageHUDRoutine);
-            _messageHUDRoutine = null;
+            StopCoroutine(messageHUDRoutine);
+            messageHUDRoutine = null;
         }
 
-        if (_controlsHUDRoutine != null)
+        if (controlsHUDRoutine != null)
         {
-            StopCoroutine(_controlsHUDRoutine);
-            _controlsHUDRoutine = null;
+            StopCoroutine(controlsHUDRoutine);
+            controlsHUDRoutine = null;
         }
 
-        _messageQueue.Clear();
+        messageQueue.Clear();
 
         if (StatManager.Instance != null)
         {
             StatManager.Instance.OnStatsChanged -= UpdateStatHUD;
         }
 
-        if (_isGamePaused)
+        if (isGamePaused)
         {
             Time.timeScale = 1f;
-            _isGamePaused = false;
+            isGamePaused = false;
         }
 
-        // CRITICAL: Always unsubscribe when this object is destroyed to prevent memory leaks!
         if (ProgressionManager.Instance != null)
         {
             ProgressionManager.Instance.OnLevelUp -= UpdateLevelUI;
@@ -169,28 +168,26 @@ public class UIManager : MonoBehaviour
 
     private void TryInitializeWaveTimerUI()
     {
-        if (_isWaveTimerSubscribed)
+        if (isWaveTimerSubscribed)
             return;
 
-        _waveManager = WaveManager.Instance;
-        if (_waveManager == null)
+        waveManager = WaveManager.Instance;
+        if (waveManager == null)
             return;
 
-        _waveManager.OnTimerChanged += UpdateTimerUI;
-        _waveManager.OnCountdownChanged += UpdateWaveCountdownUI;
-        _isWaveTimerSubscribed = true;
+        waveManager.OnTimerChanged += UpdateTimerUI;
+        waveManager.OnCountdownChanged += UpdateWaveCountdownUI;
+        isWaveTimerSubscribed = true;
 
         // Push an immediate value so the timer text never stays as blank/default.
-        float initialTime = _waveManager.CurrentState == GameState.WaveActive
-            ? _waveManager.WaveTimer
-            : _waveManager.timePerWave;
+        float initialTime = waveManager.CurrentState == GameState.WaveActive
+            ? waveManager.WaveTimer
+            : waveManager.timePerWave;
         UpdateTimerUI(initialTime);
         
         // Push initial countdown value
-        UpdateWaveCountdownUI(_waveManager.PrepCountdown);
+        UpdateWaveCountdownUI(waveManager.PrepCountdown);
     }
-
-    // --- The Event Listeners ---
 
     private void UpdateLevelUI(int newLevel)
     {
@@ -274,21 +271,21 @@ public class UIManager : MonoBehaviour
         }
 
         float showDuration = duration > 0f ? duration : defaultMessageDuration;
-        _messageQueue.Enqueue(new QueuedHUDMessage
+        messageQueue.Enqueue(new QueuedHUDMessage
         {
             Text = message,
             Duration = showDuration
         });
 
-        if (_messageHUDRoutine == null)
-            _messageHUDRoutine = StartCoroutine(ProcessMessageHUDQueue());
+        if (messageHUDRoutine == null)
+            messageHUDRoutine = StartCoroutine(ProcessMessageHUDQueue());
     }
 
     private IEnumerator ProcessMessageHUDQueue()
     {
-        while (_messageQueue.Count > 0)
+        while (messageQueue.Count > 0)
         {
-            QueuedHUDMessage queuedMessage = _messageQueue.Dequeue();
+            QueuedHUDMessage queuedMessage = messageQueue.Dequeue();
             messageHUDText.text = queuedMessage.Text;
             messageHUDPanel.SetActive(true);
             yield return new WaitForSeconds(queuedMessage.Duration);
@@ -296,7 +293,7 @@ public class UIManager : MonoBehaviour
         }
 
         HideAndClearMessageHUD();
-        _messageHUDRoutine = null;
+        messageHUDRoutine = null;
     }
 
     private void HideAndClearMessageHUD()
@@ -332,7 +329,7 @@ public class UIManager : MonoBehaviour
 
     public void ToggleGamePausedPanel()
     {
-        if (_isGamePaused)
+        if (isGamePaused)
             HideGamePausedPanel();
         else
             ShowGamePausedPanel();
@@ -340,7 +337,7 @@ public class UIManager : MonoBehaviour
 
     public void ShowGamePausedPanel()
     {
-        _isGamePaused = true;
+        isGamePaused = true;
         Time.timeScale = 0f;
 
         if (gamePausedPanel != null)
@@ -354,7 +351,7 @@ public class UIManager : MonoBehaviour
         if (IsControlsHUDOpen())
             return;
 
-        _isGamePaused = false;
+        isGamePaused = false;
         Time.timeScale = 1f;
 
         if (gamePausedPanel != null)

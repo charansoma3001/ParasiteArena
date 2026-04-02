@@ -14,28 +14,24 @@ public class WaveManager : MonoBehaviour
 
     [Header("Wave Settings")]
     public float timePerWave = 60f;
-
     [Header("Boss Settings")]
-    [Tooltip("Boss spawns at the END of this wave. Waves continue after boss appears.")]
     public int bossWave = 5;
-    [Tooltip("Prefab for the boss. Assign in Inspector.")]
     public GameObject bossPrefab;
-    [Tooltip("World-space offset from the player where the boss spawns.")]
     public float bossSpawnOffset = 5f;
 
-    public GameState CurrentState  { get; private set; }
-    public int       CurrentWave   { get; private set; } = 0;
-    public float     WaveTimer     { get; private set; }
-    public float     PrepCountdown { get; private set; } = 0f;
-    public bool      BossSpawned   { get; private set; } = false;
+    public GameState CurrentState{ get; private set; }
+    public int CurrentWave{ get; private set; } = 0;
+    public float WaveTimer{ get; private set; }
+    public float PrepCountdown{ get; private set; } = 0f;
+    public bool BossSpawned{ get; private set; } = false;
 
-    private float _prepCountdownMax = 3f;
+    private float prepCountdownMax = 3f;
 
-    public event Action<int>   OnWaveStarted;
-    public event Action        OnWaveEnded;
+    public event Action<int> OnWaveStarted;
+    public event Action OnWaveEnded;
     public event Action<float> OnTimerChanged;
     public event Action<float> OnCountdownChanged;
-    public event Action        OnBossSpawned;
+    public event Action OnBossSpawned;
 
     private void Awake()
     {
@@ -43,13 +39,13 @@ public class WaveManager : MonoBehaviour
         Instance = this;
     }
 
-    private void Start()
+    private void Start() // begins the game in prep phase and starts the first countdown
     {
         ChangeState(GameState.PrepPhase);
         Invoke(nameof(StartNextWave), 3f);
     }
 
-    private void Update()
+    private void Update() // keeps reducing the countdown or wave timer
     {
         if (CurrentState == GameState.PrepPhase && PrepCountdown > 0)
         {
@@ -66,17 +62,17 @@ public class WaveManager : MonoBehaviour
         }
     }
 
-    public void StartNextWave()
+    public void StartNextWave() //starts the countdown before a new wave
     {
         if (CurrentState != GameState.PrepPhase) return;
         if (PrepCountdown > 0) return;
 
-        PrepCountdown = _prepCountdownMax;
+        PrepCountdown = prepCountdownMax;
         OnCountdownChanged?.Invoke(PrepCountdown);
         ShopManager.Instance?.CloseShop();
     }
 
-    private void BeginWave()
+    private void BeginWave() //starts the next wave
     {
         CurrentWave++;
         WaveTimer = timePerWave;
@@ -85,7 +81,7 @@ public class WaveManager : MonoBehaviour
         Debug.Log($"[WaveManager] Wave {CurrentWave} started.");
     }
 
-    private void EndWave()
+    private void EndWave() //ends the wave, opens the shop, and may spawn the boss
     {
         ChangeState(GameState.PrepPhase);
         PrepCountdown = 0f;
@@ -99,7 +95,7 @@ public class WaveManager : MonoBehaviour
         TriggerShop();
     }
 
-    private void SpawnBoss()
+    private void SpawnBoss() //spawn the boss near the player on a safe grass tile inside the playable area
     {
         if (bossPrefab == null)
         {
@@ -110,14 +106,7 @@ public class WaveManager : MonoBehaviour
         var player = GameObject.FindWithTag("Player");
         Vector3 origin = player != null ? player.transform.position : Vector3.zero;
 
-        // Try to land the boss on a walkable grass tile near the player.
-        // Both gates must pass: the candidate must be inside the playable area
-        // bounds AND on a Grass tile.  Without the bounds check, GetTerrainType
-        // clamps out-of-range positions to edge tiles and silently returns Grass,
-        // which allows the boss to spawn outside the visible background.
         MapManager map = MapManager.Instance;
-
-        // Default: clamped offset (will be overwritten by a valid candidate when found).
         Vector3 spawnPos = origin + new Vector3(bossSpawnOffset, 0f, 0f);
         if (map != null)
         {
@@ -139,10 +128,10 @@ public class WaveManager : MonoBehaviour
                     Mathf.Sin(angle) * bossSpawnOffset,
                     0f);
 
-                // Gate 1: inside playable bounds.
+                // inside playable bounds.
                 if (!map.IsInsidePlayableArea(new Vector2(candidate.x, candidate.y))) continue;
 
-                // Gate 2: grass tile.
+                // grass tile.
                 int tx = Mathf.RoundToInt(candidate.x);
                 int ty = Mathf.RoundToInt(candidate.y);
                 if (map.GetTerrainType(tx, ty) != TerrainType.Grass) continue;
@@ -166,12 +155,12 @@ public class WaveManager : MonoBehaviour
         Debug.Log($"[WaveManager] Boss spawned after Wave {CurrentWave}.");
     }
 
-    private void TriggerShop()
+    private void TriggerShop() //opens the shop
     {
         ShopManager.Instance?.OpenShop();
     }
 
-    private void ChangeState(GameState newState)
+    private void ChangeState(GameState newState) //changes the current game state
     {
         CurrentState = newState;
     }
