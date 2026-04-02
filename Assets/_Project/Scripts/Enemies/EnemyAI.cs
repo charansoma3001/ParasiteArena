@@ -16,70 +16,70 @@ public class EnemyAI : MonoBehaviour
     [Header("Pathfinding")]
     public LayerMask obstacleLayer;
 
-    private EnemyController _ctrl;
-    private Rigidbody2D _rb;
-    private EnemyStats _stats;
-    private Transform _player;
-    private EnemyAnimator _anim;
+    private EnemyController ctrl;
+    private Rigidbody2D rb;
+    private EnemyStats stats;
+    private Transform player;
+    private EnemyAnimator anim;
 
-    private bool _isStepping;
-    private float _stepCooldownTimer;
+    private bool isStepping;
+    private float stepCooldownTimer;
 
-    private Vector2 _chompDir;
-    private float _chompBounceTimer;
+    private Vector2 chompDir;
+    private float chompBounceTimer;
     private const float ChompBounceInterval = 1.8f;
 
-    private float _spawnTimer;
-    private int _activeSpawnCount;
+    private float spawnTimer;
+    private int activeSpawnCount;
 
-    private Vector2 _spawnPos;
-    private bool _ratAlerted;
-    private float _ratAlertTimer;
-    private bool _ratReturning;
+    private Vector2 spawnPos;
+    private bool ratAlerted;
+    private float ratAlertTimer;
+    private bool ratReturning;
 
     public Vector2 FacingDirection { get; private set; } = Vector2.down;
-    public bool IsMoving => _isStepping;
+    public bool IsMoving => isStepping;
 
     private void Awake()
     {
-        _ctrl = GetComponent<EnemyController>();
-        _rb = GetComponent<Rigidbody2D>();
-        _rb.freezeRotation = true;
-        _rb.gravityScale = 0f;
-        _stats = _ctrl.stats;
-        _anim = GetComponentInChildren<EnemyAnimator>();
+        ctrl = GetComponent<EnemyController>();
+        rb = GetComponent<Rigidbody2D>();
+        rb.freezeRotation = true;
+        rb.gravityScale = 0f;
+        stats = ctrl.stats;
+        anim = GetComponentInChildren<EnemyAnimator>();
         var p = GameObject.FindWithTag("Player");
-        if (p) _player = p.transform;
+        if (p) player = p.transform;
     }
 
     private void Start()
     {
         SnapToGrid();
-        _spawnPos = _rb.position;
+        spawnPos = rb.position;
 
-        switch (_stats.enemyType)
+        switch (stats.enemyType)
         {
             case EnemyStats.EnemyType.Chomp:
-                _chompDir = CardinalDir(Random.insideUnitCircle);
-                _chompBounceTimer = ChompBounceInterval;
-                _ctrl.SetState(EnemyController.EnemyState.Roaming);
+                chompDir = CardinalDir(Random.insideUnitCircle);
+                chompBounceTimer = ChompBounceInterval;
+                ctrl.SetState(EnemyController.EnemyState.Roaming);
                 break;
             case EnemyStats.EnemyType.Spawner:
-                _ctrl.SetState(EnemyController.EnemyState.Idle);
+                ctrl.SetState(EnemyController.EnemyState.Idle);
                 break;
             default:
-                _ctrl.SetState(EnemyController.EnemyState.Idle);
+                ctrl.SetState(EnemyController.EnemyState.Idle);
                 break;
         }
     }
 
     private void Update()
     {
-        if (_ctrl.IsDead || _ctrl.IsPossessed) return;
-        _anim?.TickMovement(_isStepping);
-        _stepCooldownTimer -= Time.deltaTime;
+        if (ctrl.IsDead || ctrl.IsPossessed) return;
+        anim?.TickMovement(isStepping);
+        stepCooldownTimer -= Time.deltaTime;
 
-        switch (_stats.enemyType)
+        switch (stats.enemyType)
         {
             case EnemyStats.EnemyType.Chomp: UpdateChomp(); return;
             case EnemyStats.EnemyType.Spawner: UpdateSpawner(); return;
@@ -91,13 +91,13 @@ public class EnemyAI : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (_ctrl.IsDead) return;
-        if (!_isStepping)
-            _rb.velocity = Vector2.zero;
+        if (ctrl.IsDead) return;
+        if (!isStepping)
+            rb.velocity = Vector2.zero;
     }
 
     private Vector3 GetTargetPosition() =>
-        _player != null ? _player.position : transform.position;
+        player != null ? player.position : transform.position;
 
     public Vector3 GetCurrentTarget() => GetTargetPosition();
 
@@ -106,27 +106,27 @@ public class EnemyAI : MonoBehaviour
         Vector3 target = GetTargetPosition();
         float dist = Vector2.Distance(transform.position, target);
 
-        if (_ctrl.CurrentState == EnemyController.EnemyState.Idle ||
-            _ctrl.CurrentState == EnemyController.EnemyState.Roaming)
+        if (ctrl.CurrentState == EnemyController.EnemyState.Idle ||
+            ctrl.CurrentState == EnemyController.EnemyState.Roaming)
         {
-            if (dist <= _stats.detectionRange)
-                _ctrl.SetState(EnemyController.EnemyState.Chasing);
+            if (dist <= stats.detectionRange)
+                ctrl.SetState(EnemyController.EnemyState.Chasing);
         }
 
-        if (_ctrl.CurrentState != EnemyController.EnemyState.Chasing) return;
-        if (_isStepping) return;
+        if (ctrl.CurrentState != EnemyController.EnemyState.Chasing) return;
+        if (isStepping) return;
 
         float tilesDist = TilesFrom(target);
-        float effectiveRange = (_stats.enemyType == EnemyStats.EnemyType.Swordsman) ? _stats.attackRange * 1.8f : _stats.attackRange;
+        float effectiveRange = (stats.enemyType == EnemyStats.EnemyType.Swordsman) ? stats.attackRange * 1.8f : stats.attackRange;
         if (tilesDist <= effectiveRange)
         {
             FacingDirection = CardinalDir(target - transform.position);
-            _anim?.SetFacing(FacingDirection);
-            _ctrl.TriggerAttack();
+            anim?.SetFacing(FacingDirection);
+            ctrl.TriggerAttack();
             return;
         }
 
-        if (_stepCooldownTimer > 0f) return;
+        if (stepCooldownTimer > 0f) return;
         Vector2 step = BestStepToward(target);
         if (step != Vector2.zero) StartCoroutine(TakeStep(step));
     }
@@ -136,29 +136,29 @@ public class EnemyAI : MonoBehaviour
         Vector3 target = GetTargetPosition();
         float dist = Vector2.Distance(transform.position, target);
 
-        if (_ctrl.CurrentState == EnemyController.EnemyState.Idle ||
-            _ctrl.CurrentState == EnemyController.EnemyState.Roaming)
+        if (ctrl.CurrentState == EnemyController.EnemyState.Idle ||
+            ctrl.CurrentState == EnemyController.EnemyState.Roaming)
         {
-            if (dist <= _stats.detectionRange)
-                _ctrl.SetState(EnemyController.EnemyState.Chasing);
+            if (dist <= stats.detectionRange)
+                ctrl.SetState(EnemyController.EnemyState.Chasing);
         }
 
-        if (_ctrl.CurrentState != EnemyController.EnemyState.Chasing) return;
-        if (_ctrl.CurrentState == EnemyController.EnemyState.Attacking) return;
+        if (ctrl.CurrentState != EnemyController.EnemyState.Chasing) return;
+        if (ctrl.CurrentState == EnemyController.EnemyState.Attacking) return;
 
         float tilesDist = TilesFrom(target);
         bool aligned = IsCardinalAligned(target);
-        bool inRange = tilesDist <= _stats.arrowRange;
+        bool inRange = tilesDist <= stats.arrowRange;
 
         if (aligned && inRange && tilesDist > 0)
         {
             FacingDirection = CardinalDir(target - transform.position);
-            _anim?.SetFacing(FacingDirection);
-            _ctrl.TriggerAttack();
+            anim?.SetFacing(FacingDirection);
+            ctrl.TriggerAttack();
             return;
         }
 
-        if (_isStepping || _stepCooldownTimer > 0f) return;
+        if (isStepping || stepCooldownTimer > 0f) return;
 
         if (tilesDist < archerKiteDistance)
         {
@@ -172,65 +172,65 @@ public class EnemyAI : MonoBehaviour
 
     private void UpdateRat()
     {
-        if (_player == null) return;
-        float dist = Vector2.Distance(transform.position, _player.position);
-        bool inRange = dist <= _stats.detectionRange;
+        if (player == null) return;
+        float dist = Vector2.Distance(transform.position, player.position);
+        bool inRange = dist <= stats.detectionRange;
 
-        if (_ctrl.CurrentState == EnemyController.EnemyState.Idle)
+        if (ctrl.CurrentState == EnemyController.EnemyState.Idle)
         {
             if (inRange)
             {
-                _ratReturning = false;
-                _ratAlerted = false;
-                _ratAlertTimer = _stats.alertDelay;
-                _ctrl.SetState(EnemyController.EnemyState.Chasing);
+                ratReturning = false;
+                ratAlerted = false;
+                ratAlertTimer = stats.alertDelay;
+                ctrl.SetState(EnemyController.EnemyState.Chasing);
             }
             return;
         }
 
-        if (_ctrl.CurrentState == EnemyController.EnemyState.Chasing)
+        if (ctrl.CurrentState == EnemyController.EnemyState.Chasing)
         {
             if (!inRange)
             {
-                _ratReturning = true;
+                ratReturning = true;
             }
 
-            if (_ratReturning)
+            if (ratReturning)
             {
-                float distToSpawn = Vector2.Distance(transform.position, _spawnPos);
+                float distToSpawn = Vector2.Distance(transform.position, spawnPos);
                 if (distToSpawn <= tileSize * 0.6f)
                 {
-                    _ratReturning = false;
-                    _ctrl.SetState(EnemyController.EnemyState.Idle);
+                    ratReturning = false;
+                    ctrl.SetState(EnemyController.EnemyState.Idle);
                     return;
                 }
-                if (!_isStepping && _stepCooldownTimer <= 0f)
+                if (!isStepping && stepCooldownTimer <= 0f)
                 {
-                    Vector2 step = BestStepToward(_spawnPos);
+                    Vector2 step = BestStepToward(spawnPos);
                     if (step != Vector2.zero) StartCoroutine(TakeStep(step));
                 }
                 return;
             }
 
-            if (!_ratAlerted)
+            if (!ratAlerted)
             {
-                _ratAlertTimer -= Time.deltaTime;
-                if (_ratAlertTimer <= 0f) _ratAlerted = true;
+                ratAlertTimer -= Time.deltaTime;
+                if (ratAlertTimer <= 0f) ratAlerted = true;
                 return;
             }
 
-            float tilesDist = TilesFrom(_player.position);
-            if (tilesDist <= _stats.attackRange)
+            float tilesDist = TilesFrom(player.position);
+            if (tilesDist <= stats.attackRange)
             {
-                FacingDirection = CardinalDir(_player.position - transform.position);
-                _anim?.SetFacing(FacingDirection);
-                _ctrl.TriggerAttack();
+                FacingDirection = CardinalDir(player.position - transform.position);
+                anim?.SetFacing(FacingDirection);
+                ctrl.TriggerAttack();
                 return;
             }
 
-            if (!_isStepping && _stepCooldownTimer <= 0f)
+            if (!isStepping && stepCooldownTimer <= 0f)
             {
-                Vector2 step = BestStepToward(_player.position);
+                Vector2 step = BestStepToward(player.position);
                 if (step != Vector2.zero) StartCoroutine(TakeStep(step));
             }
         }
@@ -273,7 +273,7 @@ public class EnemyAI : MonoBehaviour
     public void BeginRoam()
     {
         StopAllCoroutines();
-        if (_stats.enemyType == EnemyStats.EnemyType.Rat) return;
+        if (stats.enemyType == EnemyStats.EnemyType.Rat) return;
         StartCoroutine(RoamCoroutine());
     }
 
@@ -290,95 +290,95 @@ public class EnemyAI : MonoBehaviour
 
     private void UpdateChomp()
     {
-        if (_isStepping || _stepCooldownTimer > 0f) return;
-        _chompBounceTimer -= Time.deltaTime;
-        if (_chompBounceTimer <= 0f || WouldHitObstacle(_chompDir))
+        if (isStepping || stepCooldownTimer > 0f) return;
+        chompBounceTimer -= Time.deltaTime;
+        if (chompBounceTimer <= 0f || WouldHitObstacle(chompDir))
         {
             Vector2[] dirs = { Vector2.up, Vector2.down, Vector2.left, Vector2.right };
-            _chompDir = dirs[Random.Range(0, dirs.Length)];
-            _chompBounceTimer = ChompBounceInterval;
+            chompDir = dirs[Random.Range(0, dirs.Length)];
+            chompBounceTimer = ChompBounceInterval;
         }
-        StartCoroutine(TakeStep(_chompDir));
-        if (_player != null && Vector2.Distance(transform.position, _player.position) < tileSize * 0.8f)
-            _player.GetComponent<PlayerController>()?.TakeDamage(_ctrl.GetActualAttackDamage());
+        StartCoroutine(TakeStep(chompDir));
+        if (player != null && Vector2.Distance(transform.position, player.position) < tileSize * 0.8f)
+            player.GetComponent<PlayerController>()?.TakeDamage(ctrl.GetActualAttackDamage());
     }
 
     private void UpdateSpawner()
     {
-        if (_stats.spawnPrefab == null || _activeSpawnCount >= _stats.maxSpawnCount) return;
-        _spawnTimer -= Time.deltaTime;
-        if (_spawnTimer > 0f) return;
-        _spawnTimer = _stats.spawnInterval;
+        if (stats.spawnPrefab == null || activeSpawnCount >= stats.maxSpawnCount) return;
+        spawnTimer -= Time.deltaTime;
+        if (spawnTimer > 0f) return;
+        spawnTimer = stats.spawnInterval;
 
         Vector2 offset = CardinalDir(Random.insideUnitCircle) * tileSize;
-        var go   = Instantiate(_stats.spawnPrefab,
+        var go   = Instantiate(stats.spawnPrefab,
                                SnapPos(transform.position + (Vector3)offset), Quaternion.identity);
         var ctrl = go.GetComponent<EnemyController>();
         ctrl?.Init();
-        _activeSpawnCount++;
+        activeSpawnCount++;
         EnemyController.OnEnemyDied += OnChildDied;
         void OnChildDied(EnemyController dead)
         {
             if (dead.gameObject != go) return;
-            _activeSpawnCount--;
+            activeSpawnCount--;
             EnemyController.OnEnemyDied -= OnChildDied;
         }
     }
 
     private IEnumerator TakeStep(Vector2 dir)
     {
-        if (_isStepping) yield break;
+        if (isStepping) yield break;
         dir = CardinalDir(dir);
         if (dir == Vector2.zero || WouldHitObstacle(dir)) yield break;
 
-        _isStepping = true;
-        _stepCooldownTimer = stepCooldown;
+        isStepping = true;
+        stepCooldownTimer = stepCooldown;
         FacingDirection = dir;
-        _anim?.SetFacing(dir);
+        anim?.SetFacing(dir);
 
-        _rb.velocity = Vector2.zero;
+        rb.velocity = Vector2.zero;
 
-        Vector2 start = _rb.position;
+        Vector2 start = rb.position;
         Vector2 end = SnapPos(start + dir * tileSize);
         float   elapsed = 0f;
 
         while (elapsed < stepDuration)
         {
             elapsed += Time.fixedDeltaTime;
-            _rb.velocity = Vector2.zero;
-            _rb.MovePosition(Vector2.Lerp(start, end, Mathf.Clamp01(elapsed / stepDuration)));
+            rb.velocity = Vector2.zero;
+            rb.MovePosition(Vector2.Lerp(start, end, Mathf.Clamp01(elapsed / stepDuration)));
             yield return new WaitForFixedUpdate();
         }
 
-        _rb.MovePosition(end);
-        _rb.velocity = Vector2.zero;
-        _isStepping = false;
+        rb.MovePosition(end);
+        rb.velocity = Vector2.zero;
+        isStepping = false;
     }
 
     public void BeginChase()
     {
         StopAllCoroutines();
-        _isStepping = false;
-        _stepCooldownTimer = 0f;
+        isStepping = false;
+        stepCooldownTimer = 0f;
     }
 
     public void StopMovement()
     {
         StopAllCoroutines();
-        _isStepping = false;
-        _rb.velocity = Vector2.zero;
+        isStepping = false;
+        rb.velocity = Vector2.zero;
     }
 
     public void StepInDirection(Vector2 input)
     {
-        if (_isStepping) return;
+        if (isStepping) return;
         StartCoroutine(TakeStep(CardinalDir(input)));
     }
 
     public EnemyController.EnemyState GetResumeState()
     {
-        if (_player == null) return EnemyController.EnemyState.Idle;
-        return Vector2.Distance(transform.position, _player.position) <= _stats.detectionRange
+        if (player == null) return EnemyController.EnemyState.Idle;
+        return Vector2.Distance(transform.position, player.position) <= stats.detectionRange
             ? EnemyController.EnemyState.Chasing
             : EnemyController.EnemyState.Roaming;
     }
@@ -414,7 +414,7 @@ public class EnemyAI : MonoBehaviour
         new Vector2(Mathf.Round(p.x / tileSize) * tileSize,
                     Mathf.Round(p.y / tileSize) * tileSize);
 
-    private void SnapToGrid() => _rb.position = SnapPos(transform.position);
+    private void SnapToGrid() => rb.position = SnapPos(transform.position);
 
     private Vector2 CardinalDir(Vector2 d)
     {

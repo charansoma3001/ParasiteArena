@@ -13,7 +13,7 @@ public class PossessionSystem : MonoBehaviour
 
     public float CooldownRemaining { get; private set; }
 
-    private Transform _player;
+    private Transform player;
 
     public float BonusPossessionTime { get; private set; }
     public float HostDecayRate { get; private set; } = 1f;
@@ -30,7 +30,7 @@ public class PossessionSystem : MonoBehaviour
     private void Start()
     {
         var go = GameObject.FindWithTag("Player");
-        if (go) _player = go.transform;
+        if (go) player = go.transform;
         else Debug.LogWarning("PossessionSystem : No 'Player' tagged object found.");
     }
 
@@ -95,7 +95,7 @@ public class PossessionSystem : MonoBehaviour
         IsPossessing = true;
         PossessedEnemy = target;
         target.SetState(EnemyController.EnemyState.Possessed);
-        _player?.GetComponent<PlayerController>()?.OnPossessionStart(target);
+        player?.GetComponent<PlayerController>()?.OnPossessionStart(target);
         OnPossessionChanged?.Invoke(true, target);
     }
 }

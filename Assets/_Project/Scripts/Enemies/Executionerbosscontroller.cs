@@ -6,9 +6,7 @@ using UnityEngine;
 public class ExecutionerBossController : MonoBehaviour
 {
     [Header("HP Thresholds (fraction of max HP)")]
-    [Tooltip("Phase 2")]
     public float phase2Threshold = 0.60f;
-    [Tooltip("Phase 3")]
     public float phase3Threshold = 0.30f;
 
     [Header("Phase 2")]
@@ -23,38 +21,24 @@ public class ExecutionerBossController : MonoBehaviour
 
    
     [Header("Summoning")]
-    [Tooltip("Prefab for the spirit minion.")]
     public GameObject spiritPrefab;
-    [Tooltip("How many spirits to spawn per summon event.")]
     public int spiritsPerSummon = 2;
-    [Tooltip("Max spirits alive at once")]
     public int maxSpirits = 10;
 
-    [Tooltip("Seconds between summon events in Phase 1.")]
     public float summonIntervalP1 = 14f;
-    [Tooltip("Seconds between summon events in Phase 2.")]
     public float summonIntervalP2 = 9f;
-    [Tooltip("Seconds between summon events in Phase 3.")]
     public float summonIntervalP3 = 5f;
 
-    [Tooltip("Duration of the Stunned pause while the Summoning animation plays.")]
     public float summonAnimDuration = 0.9f;
 
  
     [Header("Skill1")]
-    [Tooltip("Seconds between Skill1 uses in Phase 2.")]
     public float skill1IntervalP2 = 12f;
-    [Tooltip("Seconds between Skill1 uses in Phase 3.")]
     public float skill1IntervalP3 = 6f;
 
-    [Tooltip("Radius of the slam hit.")]
     public float skill1Radius = 1.4f;
-    [Tooltip("Damage multiplier on top of stats.attackDamage.")]
     public float skill1DamageMult = 1.8f;
-    [Tooltip("before the hit lands.")]
     public float skill1WindUp = 0.55f;
-
-    [Tooltip("tile prefab")]
     public GameObject skill1TilePrefab;
 
     [Header("Phase Transition")]
@@ -65,32 +49,32 @@ public class ExecutionerBossController : MonoBehaviour
    
     public int CurrentPhase { get; private set; } = 1;
 
-    private EnemyController _ctrl;
-    private EnemyAI _ai;
-    private EnemyAnimator  _anim;
+    private EnemyController ctrl;
+    private EnemyAI ai;
+    private EnemyAnimator anim;
 
-    private float _baseStepDuration;
-    private float _baseStepCooldown;
-    private float _baseAttackCooldown;
+    private float baseStepDuration;
+    private float baseStepCooldown;
+    private float baseAttackCooldown;
 
-    private bool _transitioning;
-    private int _activeSpirits;
+    private bool transitioning;
+    private int activeSpirits;
 
-    private bool _summonLoopRunning;
-    private bool _skill1LoopRunning;
+    private bool summonLoopRunning;
+    private bool skill1LoopRunning;
 
     private void Awake()
     {
-        _ctrl = GetComponent<EnemyController>();
-        _ai = GetComponent<EnemyAI>();
-        _anim = GetComponentInChildren<EnemyAnimator>();
+        ctrl = GetComponent<EnemyController>();
+        ai = GetComponent<EnemyAI>();
+        anim = GetComponentInChildren<EnemyAnimator>();
     }
 
     private void Start()
     {
-        _baseStepDuration = _ai.stepDuration;
-        _baseStepCooldown = _ai.stepCooldown;
-        _baseAttackCooldown = _ctrl.stats.attackCooldown;
+        baseStepDuration = ai.stepDuration;
+        baseStepCooldown = ai.stepCooldown;
+        baseAttackCooldown = ctrl.stats.attackCooldown;
 
         StartCoroutine(SummonLoop());
         
@@ -99,7 +83,7 @@ public class ExecutionerBossController : MonoBehaviour
 
     private void Update()
     {
-        if (_ctrl.IsDead || _transitioning) return;
+        if (ctrl.IsDead || transitioning) return;
         CheckPhaseEscalation();
     }
 
@@ -111,7 +95,7 @@ public class ExecutionerBossController : MonoBehaviour
 
     private void CheckPhaseEscalation()
     {
-        float hpPct = _ctrl.CurrentHP / _ctrl.stats.maxHealth;
+        float hpPct = ctrl.CurrentHP / ctrl.stats.maxHealth;
 
         int desired = hpPct > phase2Threshold ? 1
                     : hpPct > phase3Threshold ? 2
@@ -123,7 +107,7 @@ public class ExecutionerBossController : MonoBehaviour
 
     private void OnBossDied(EnemyController deadEnemy)
     {
-        if (deadEnemy != _ctrl) return;
+        if (deadEnemy != ctrl) return;
 
         AudioManager.Instance?.PlayGameWin();
         
@@ -139,10 +123,10 @@ public class ExecutionerBossController : MonoBehaviour
 
     private IEnumerator EscalateTo(int phase)
     {
-        _transitioning = true;
+        transitioning = true;
         CurrentPhase = phase;
 
-        _ctrl.SetState(EnemyController.EnemyState.Stunned);
+        ctrl.SetState(EnemyController.EnemyState.Stunned);
         
         if (phase == 2 && enragedSfx != null && AudioManager.Instance != null)
             AudioManager.Instance.PlaySFXAtPos(enragedSfx, transform.position);
@@ -153,12 +137,12 @@ public class ExecutionerBossController : MonoBehaviour
 
         ApplyPhaseStats(phase);
 
-        if (!_ctrl.IsDead)
-            _ctrl.SetState(EnemyController.EnemyState.Chasing);
+        if (!ctrl.IsDead)
+            ctrl.SetState(EnemyController.EnemyState.Chasing);
 
-        _transitioning = false;
+        transitioning = false;
 
-        if (phase >= 2 && !_skill1LoopRunning)
+        if (phase >= 2 && !skill1LoopRunning)
             StartCoroutine(Skill1Loop());
     }
 
@@ -167,19 +151,19 @@ public class ExecutionerBossController : MonoBehaviour
         switch (phase)
         {
             case 1:
-                _ai.stepDuration = _baseStepDuration;
-                _ai.stepCooldown = _baseStepCooldown;
-                _ctrl.stats.attackCooldown = _baseAttackCooldown;
+                ai.stepDuration = baseStepDuration;
+                ai.stepCooldown = baseStepCooldown;
+                ctrl.stats.attackCooldown = baseAttackCooldown;
                 break;
             case 2:
-                _ai.stepDuration = _baseStepDuration * p2StepDurationMult;
-                _ai.stepCooldown = _baseStepCooldown * p2StepCooldownMult;
-                _ctrl.stats.attackCooldown = _baseAttackCooldown * p2AttackCooldownMult;
+                ai.stepDuration = baseStepDuration * p2StepDurationMult;
+                ai.stepCooldown = baseStepCooldown * p2StepCooldownMult;
+                ctrl.stats.attackCooldown = baseAttackCooldown * p2AttackCooldownMult;
                 break;
             case 3:
-                _ai.stepDuration = _baseStepDuration   * p3StepDurationMult;
-                _ai.stepCooldown = _baseStepCooldown * p3StepCooldownMult;
-                _ctrl.stats.attackCooldown = _baseAttackCooldown * p3AttackCooldownMult;
+                ai.stepDuration = baseStepDuration   * p3StepDurationMult;
+                ai.stepCooldown = baseStepCooldown * p3StepCooldownMult;
+                ctrl.stats.attackCooldown = baseAttackCooldown * p3AttackCooldownMult;
                 break;
         }
     }
@@ -187,11 +171,11 @@ public class ExecutionerBossController : MonoBehaviour
 
     private IEnumerator SummonLoop()
     {
-        _summonLoopRunning = true;
+        summonLoopRunning = true;
 
         yield return new WaitForSeconds(summonIntervalP1 * 0.5f);
 
-        while (!_ctrl.IsDead)
+        while (!ctrl.IsDead)
         {
             float interval = CurrentPhase switch
             {
@@ -201,32 +185,32 @@ public class ExecutionerBossController : MonoBehaviour
             };
             yield return new WaitForSeconds(interval);
 
-            if (_ctrl.IsDead) break;
-            if (_activeSpirits >= maxSpirits) continue;
-            if (_ctrl.CurrentState == EnemyController.EnemyState.Attacking) continue;
+            if (ctrl.IsDead) break;
+            if (activeSpirits >= maxSpirits) continue;
+            if (ctrl.CurrentState == EnemyController.EnemyState.Attacking) continue;
 
             yield return StartCoroutine(PerformSummon());
         }
 
-        _summonLoopRunning = false;
+        summonLoopRunning = false;
     }
 
     private IEnumerator PerformSummon()
     {
-        _ctrl.SetState(EnemyController.EnemyState.Stunned);
-        _anim?.Play("summon");
+        ctrl.SetState(EnemyController.EnemyState.Stunned);
+        anim?.Play("summon");
 
         yield return new WaitForSeconds(summonAnimDuration);
 
-        if (_ctrl.IsDead) yield break;
+        if (ctrl.IsDead) yield break;
 
-        int toSpawn = Mathf.Min(spiritsPerSummon, maxSpirits - _activeSpirits);
+        int toSpawn = Mathf.Min(spiritsPerSummon, maxSpirits - activeSpirits);
         Vector2[] offsets =
         {
-            Vector2.up * _ai.tileSize * 1.5f,
-            Vector2.down * _ai.tileSize * 1.5f,
-            Vector2.left * _ai.tileSize * 1.5f,
-            Vector2.right * _ai.tileSize * 1.5f,
+            Vector2.up * ai.tileSize * 1.5f,
+            Vector2.down * ai.tileSize * 1.5f,
+            Vector2.left * ai.tileSize * 1.5f,
+            Vector2.right * ai.tileSize * 1.5f,
         };
 
         for (int i = 0; i < toSpawn && i < offsets.Length; i++)
@@ -236,7 +220,7 @@ public class ExecutionerBossController : MonoBehaviour
             Vector3 pos = transform.position + (Vector3)offsets[i];
             var spirit  = Instantiate(spiritPrefab, pos, Quaternion.identity);
 
-            _activeSpirits++;
+            activeSpirits++;
 
             var ec = spirit.GetComponent<EnemyController>();
             if (ec != null)
@@ -245,7 +229,7 @@ public class ExecutionerBossController : MonoBehaviour
                 onDied = dead =>
                 {
                     if (dead != ec) return;
-                    _activeSpirits = Mathf.Max(0, _activeSpirits - 1);
+                    activeSpirits = Mathf.Max(0, activeSpirits - 1);
                     EnemyController.OnEnemyDied -= onDied;
                 };
                 EnemyController.OnEnemyDied += onDied;
@@ -254,36 +238,36 @@ public class ExecutionerBossController : MonoBehaviour
             }
         }
 
-        if (!_ctrl.IsDead)
-            _ctrl.SetState(EnemyController.EnemyState.Chasing);
+        if (!ctrl.IsDead)
+            ctrl.SetState(EnemyController.EnemyState.Chasing);
     }
 
 
     private IEnumerator Skill1Loop()
     {
-        _skill1LoopRunning = true;
+        skill1LoopRunning = true;
 
         yield return new WaitForSeconds(CurrentPhase >= 3 ? skill1IntervalP3 * 0.4f
                                                           : skill1IntervalP2 * 0.5f);
 
-        while (!_ctrl.IsDead)
+        while (!ctrl.IsDead)
         {
             float interval = CurrentPhase >= 3 ? skill1IntervalP3 : skill1IntervalP2;
             yield return new WaitForSeconds(interval);
 
-            if (_ctrl.IsDead) break;
-            if (_ctrl.CurrentState == EnemyController.EnemyState.Attacking) continue;
+            if (ctrl.IsDead) break;
+            if (ctrl.CurrentState == EnemyController.EnemyState.Attacking) continue;
 
             yield return StartCoroutine(PerformSkill1());
         }
 
-        _skill1LoopRunning = false;
+        skill1LoopRunning = false;
     }
 
     private IEnumerator PerformSkill1()
     {
-        _ctrl.SetState(EnemyController.EnemyState.Attacking);
-        _anim?.Play("Skill1");
+        ctrl.SetState(EnemyController.EnemyState.Attacking);
+        anim?.Play("Skill1");
 
         GameObject tile = null;
         if (skill1TilePrefab != null)
@@ -294,21 +278,21 @@ public class ExecutionerBossController : MonoBehaviour
 
         yield return new WaitForSeconds(skill1WindUp);
 
-        float dmg = _ctrl.GetActualAttackDamage() * skill1DamageMult;
+        float dmg = ctrl.GetActualAttackDamage() * skill1DamageMult;
         foreach (var col in Physics2D.OverlapCircleAll(transform.position, skill1Radius))
         {
             col.GetComponent<PlayerController>()?.TakeDamage(dmg);
 
             var ec = col.GetComponent<EnemyController>();
-            if (ec != null && ec != _ctrl && ec.IsPossessed)
+            if (ec != null && ec != ctrl && ec.IsPossessed)
                 ec.TakeDamage(dmg);
         }
 
         yield return new WaitForSeconds(0.15f);
         if (tile) Destroy(tile);
 
-        if (!_ctrl.IsDead)
-            _ctrl.SetState(EnemyController.EnemyState.Chasing);
+        if (!ctrl.IsDead)
+            ctrl.SetState(EnemyController.EnemyState.Chasing);
     }
 
     private void OnDrawGizmosSelected()
