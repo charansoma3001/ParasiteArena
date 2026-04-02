@@ -444,29 +444,29 @@ public class EnemyController : MonoBehaviour
 
 public class ArrowProjectile : MonoBehaviour
 {
-    private Vector2 _dir;
-    private float _speed;
-    private float _damage;   
-    private float _enemyDamage; 
-    private GameObject _owner;
-    private bool _ready;
-    private bool _firedByPossessed;
+    private Vector2 direction;
+    private float speed;
+    private float damage;   
+    private float enemyDamage; 
+    private GameObject owner;
+    private bool ready;
+    private bool firedByPossessed;
 
     public void Init(Vector2 dir, float speed, float damage, GameObject owner)
         => Init(dir, speed, damage, damage, owner, false);
 
     public void Init(Vector2 dir, float speed, float playerDamage, float enemyDamage, GameObject owner, bool firedByPossessed)
     {
-        _dir = dir.normalized;
-        _speed = speed;
-        _damage = playerDamage;
-        _enemyDamage = enemyDamage;
-        _owner = owner;
-        _ready = true;
-        _firedByPossessed = firedByPossessed;
+        direction = dir.normalized;
+        speed = speed;
+        damage = playerDamage;
+        enemyDamage = enemyDamage;
+        owner = owner;
+        ready = true;
+        firedByPossessed = firedByPossessed;
 
         transform.rotation = Quaternion.AngleAxis(
-            Mathf.Atan2(_dir.y, _dir.x) * Mathf.Rad2Deg, Vector3.forward);
+            Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg, Vector3.forward);
 
         if (!GetComponent<Collider2D>())
         {
@@ -481,23 +481,23 @@ public class ArrowProjectile : MonoBehaviour
 
     private void Update()
     {
-        if (!_ready) return;
-        transform.Translate(Vector2.right * _speed * Time.deltaTime);
+        if (!ready) return;
+        transform.Translate(Vector2.right * speed * Time.deltaTime);
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (!_ready || other.gameObject == _owner || other.isTrigger) return;
+        if (!ready || other.gameObject == owner || other.isTrigger) return;
 
         bool hit = false;
         var pc = other.GetComponent<PlayerController>();
-        if (pc != null) { pc.TakeDamage(_damage); hit = true; }
+        if (pc != null) { pc.TakeDamage(damage); hit = true; }
 
         var ec = other.GetComponent<EnemyController>();
-        if (ec != null && ec.gameObject != _owner)
+        if (ec != null && ec.gameObject != owner)
         {
-            if (ec.IsPossessed || _firedByPossessed)
-            { ec.TakeDamage(_enemyDamage); hit = true; }
+            if (ec.IsPossessed || firedByPossessed)
+            { ec.TakeDamage(enemyDamage); hit = true; }
         }
 
         if (hit) Destroy(gameObject);
