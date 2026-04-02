@@ -78,7 +78,6 @@ public class WaveManager : MonoBehaviour
         WaveTimer = timePerWave;
         ChangeState(GameState.WaveActive);
         OnWaveStarted?.Invoke(CurrentWave);
-        Debug.Log($"[WaveManager] Wave {CurrentWave} started.");
     }
 
     private void EndWave() //ends the wave, opens the shop, and may spawn the boss
@@ -87,7 +86,6 @@ public class WaveManager : MonoBehaviour
         PrepCountdown = 0f;
         OnCountdownChanged?.Invoke(0f);
         OnWaveEnded?.Invoke();
-        Debug.Log($"[WaveManager] Wave {CurrentWave} ended.");
 
         if (CurrentWave >= bossWave && !BossSpawned)
             SpawnBoss();
@@ -99,7 +97,6 @@ public class WaveManager : MonoBehaviour
     {
         if (bossPrefab == null)
         {
-            Debug.LogWarning("[WaveManager] bossPrefab not assigned — skipping boss spawn.");
             return;
         }
 
@@ -140,8 +137,6 @@ public class WaveManager : MonoBehaviour
                 found = true;
                 break;
             }
-            if (!found)
-                Debug.LogWarning("[WaveManager] Boss could not find a valid grass tile inside playable area — spawning at clamped default offset.");
         }
 
         var boss = Instantiate(bossPrefab, spawnPos, Quaternion.identity);
@@ -152,7 +147,6 @@ public class WaveManager : MonoBehaviour
         AudioManager.Instance?.PlayBossWave();
         
         OnBossSpawned?.Invoke();
-        Debug.Log($"[WaveManager] Boss spawned after Wave {CurrentWave}.");
     }
 
     private void TriggerShop() //opens the shop

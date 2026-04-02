@@ -31,7 +31,6 @@ public class PossessionSystem : MonoBehaviour
     {
         var go = GameObject.FindWithTag("Player");
         if (go) player = go.transform;
-        else Debug.LogWarning("PossessionSystem : No 'Player' tagged object found.");
     }
 
     private void Update()

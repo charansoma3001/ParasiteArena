@@ -91,9 +91,5 @@ public class LevelUpRewardManager : MonoBehaviour
         {
             UIManager.Instance.ShowMessageHUD(levelUpMessage, 2f);
         }
-        else
-        {
-            Debug.Log(levelUpMessage);
-        }
     }
 }

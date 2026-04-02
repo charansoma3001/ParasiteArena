@@ -74,11 +74,6 @@ public class UIManager : MonoBehaviour
         HideGameOverScreen();
         HideWaveCountdown();
 
-        if (timerText == null)
-        {
-            Debug.LogWarning("UIManager timerText is not assigned in the Inspector.");
-        }
-
         TryInitializeWaveTimerUI();
 
         player = FindFirstObjectByType<PlayerController>();
@@ -103,10 +98,6 @@ public class UIManager : MonoBehaviour
             UpdateLevelUI(ProgressionManager.Instance.CurrentLevel);
             UpdateXPUI(ProgressionManager.Instance.CurrentXP, ProgressionManager.Instance.XPToNextLevel);
             UpdateGoldUI(ProgressionManager.Instance.CurrentGold);
-        }
-        else
-        {
-            Debug.LogError("UIManager couldn't find the ProgressionManager! (This is common in menu screen)");
         }
     }
 
@@ -266,7 +257,6 @@ public class UIManager : MonoBehaviour
     {
         if (messageHUDPanel == null || messageHUDText == null)
         {
-            Debug.LogWarning("UIManager MessageHUD references are not assigned in the Inspector.");
             return;
         }
 
@@ -309,7 +299,6 @@ public class UIManager : MonoBehaviour
     {
         if (controlsHUDPanel == null)
         {
-            Debug.LogWarning("UIManager controlsHUDPanel is not assigned in the Inspector.");
             return;
         }
 
@@ -342,8 +331,6 @@ public class UIManager : MonoBehaviour
 
         if (gamePausedPanel != null)
             gamePausedPanel.SetActive(true);
-        else
-            Debug.LogWarning("UIManager gamePausedPanel is not assigned in the Inspector.");
     }
 
     public void HideGamePausedPanel()
@@ -378,8 +365,6 @@ public class UIManager : MonoBehaviour
 
         if (gameOverPanel != null)
             gameOverPanel.SetActive(true);
-        else
-            Debug.LogWarning("UIManager gameOverPanel is not assigned in the Inspector.");
     }
 
     private void HideGameOverScreen()

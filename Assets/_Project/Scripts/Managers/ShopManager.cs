@@ -67,7 +67,6 @@ public class ShopManager : MonoBehaviour
         Time.timeScale = 1f;
     }
 
-    // Link this to the Start Next Wave button OnClick in the Inspector
     public void StartNextWave()
     {
         if (WaveManager.Instance != null)
@@ -84,38 +83,31 @@ public class ShopManager : MonoBehaviour
 
         for (int i = 0; i < 3; i++)
         {
-            // Pick a random upgrade from your master list
+            // pick a random upgrade
             int rand = Random.Range(0, allPossibleUpgrades.Count);
             UpgradeData chosenUpgrade = allPossibleUpgrades[rand];
             currentShopUpgrades[i] = chosenUpgrade;
 
-            // Update the UI text
+            // update the UI text
             names[i].text = chosenUpgrade.upgradeName;
             costs[i].text = chosenUpgrade.goldCost.ToString() + " Gold";
             descs[i].text = chosenUpgrade.description;
 
-            // Check if player has enough gold; if not, grey out the button
+            // check if player has enough gold and grey out the button
             buttons[i].interactable = ProgressionManager.Instance.CurrentGold >= chosenUpgrade.goldCost;
         }
     }
 
-    // --- TRANSACTION LOGIC ---
-
-    // We link this function to the physical UI buttons in the Unity Inspector
     public void BuyItem(int slotIndex)
     {
         UpgradeData upgradeToBuy = currentShopUpgrades[slotIndex];
 
-        // ProgressionManager.SpendGold() returns TRUE if we had enough money!
         if (ProgressionManager.Instance.SpendGold(upgradeToBuy.goldCost))
         {
-            // Apply the math to the player
             StatManager.Instance.AddUpgrade(upgradeToBuy);
 
-            // Mark the item as Sold and disable the button
             MarkAsSold(slotIndex);
 
-            // Re-check the other buttons (in case buying this made the player too poor for the others)
             RefreshButtonStates();
         }
     }
@@ -129,13 +121,11 @@ public class ShopManager : MonoBehaviour
 
     private void RefreshButtonStates()
     {
-        // If they don't have enough gold for the remaining items, disable those buttons
         if (costText1.text != "SOLD") button1.interactable = ProgressionManager.Instance.CurrentGold >= currentShopUpgrades[0].goldCost;
         if (costText2.text != "SOLD") button2.interactable = ProgressionManager.Instance.CurrentGold >= currentShopUpgrades[1].goldCost;
         if (costText3.text != "SOLD") button3.interactable = ProgressionManager.Instance.CurrentGold >= currentShopUpgrades[2].goldCost;
     }
-
-    // For testing in the sandbox: Press 'B' to open/close the shop
+    
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.B))

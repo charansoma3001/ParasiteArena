@@ -114,10 +114,6 @@ public class StatManager : MonoBehaviour
             playerController.SetAttackDamage(GetStatOr(StatType.AttackDamage, 0f));
             playerController.SetHostDecayRate(GetStatOr(StatType.HostDecayRate, 1f));
         }
-        else
-        {
-            Debug.LogWarning("StatManager couldn't find PlayerController to apply stats.");
-        }
 
         if (PossessionSystem.Instance != null)
         {
@@ -135,7 +131,6 @@ public class StatManager : MonoBehaviour
             return currentStats[stat];
         }
         
-        Debug.LogWarning("Stat " + stat + " not found in StatManager!");
         return 0f; // Fallback
     }
 }

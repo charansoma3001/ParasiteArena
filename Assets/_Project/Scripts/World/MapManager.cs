@@ -230,9 +230,6 @@ public class MapManager : MonoBehaviour
             PlaceChest(pos, openSprite);
             placed++;
         }
-
-        if (placed < chestCount)
-            Debug.LogWarning($"[MapManager] Could only place {placed}/{chestCount} chests — try reducing chestMinSeparation.");
     }
 
     private void PlaceChest(Vector2 worldPos, Sprite openSprite)

@@ -44,7 +44,6 @@ public class ChestSystem : MonoBehaviour
             int goldAmount = Random.Range(minGold, maxGold + 1);
             ProgressionManager.Instance.AddGold(goldAmount);
             chestMessage = $"Chest opened: Found {goldAmount} Gold!";
-            Debug.Log(chestMessage);
         }
         else if (roll <= (goldChance + upgradeChance))
         {
@@ -57,19 +56,16 @@ public class ChestSystem : MonoBehaviour
                 // Send it directly to your StatManager!
                 StatManager.Instance.AddUpgrade(droppedUpgrade);
                 chestMessage = $"Chest opened: Found Upgrade [{droppedUpgrade.upgradeName}]!";
-                Debug.Log(chestMessage);
             }
             else
             {
                 chestMessage = "Chest opened, but no upgrade was available.";
-                Debug.LogWarning("Chest rolled an upgrade, but the 'possibleUpgrades' list is empty!");
             }
         }
         else
         {
             // Drop a Heal (Placeholder until Gagan builds the Player Health system)
             chestMessage = "You found a Health Potion!";
-            Debug.Log(chestMessage);
             if (_player == null)
             {
                 _player = FindFirstObjectByType<PlayerController>();
