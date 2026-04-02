@@ -13,7 +13,7 @@ public class HealthScript : MonoBehaviour
     public bool hideWhenDead = true;
 
     private float lastHp = float.MinValue;
-    private bool lastHp = true;
+    private bool isLastVisible = true;
 
     private void Awake()
     {
@@ -40,10 +40,10 @@ public class HealthScript : MonoBehaviour
         if (hideWhenDead && enemy.IsDead) visible = false;
         if (hideWhenPossessed && enemy.IsPossessed) visible = false;
 
-        if (visible != lastHp)
+        if (visible != isLastVisible)
         {
             SetVisible(visible);
-            lastHp = visible;
+            isLastVisible = visible;
         }
 
         if (!Mathf.Approximately(lastHp, enemy.CurrentHP))
@@ -58,7 +58,7 @@ public class HealthScript : MonoBehaviour
     {
         if (enemy == null || enemy.stats == null || healthSlider == null) return;
         lastHp = float.MinValue;
-        lastHp = true;
+        isLastVisible = true;
         SetVisible(true);
         
         float maxHp = Mathf.Max(1f, enemy.stats.maxHealth);

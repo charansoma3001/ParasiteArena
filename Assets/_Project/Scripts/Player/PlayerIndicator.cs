@@ -10,15 +10,18 @@ public class PlayerIndicator : MonoBehaviour
     public float bounceHeight = 0.1f; 
     public float bounceSpeed = 8f; 
 
-
-    // Update is called once per frame
     void Update()
     {
+        // bounce effect for the indicator
         float bounce = Mathf.Sin(Time.time * bounceSpeed) * bounceHeight;
 
         Vector3 newPos = target.position + offset;
+
+        // apply bouce to y
         newPos.y += bounce;
         transform.position = newPos;
+
+        // rotate the indicator in y axis 
         transform.Rotate(0f,rotationSpeed * Time.deltaTime, 0f);    
     }
 }
