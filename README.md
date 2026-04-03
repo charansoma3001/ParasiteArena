@@ -21,3 +21,9 @@ The managers and controllers include:
 https://assetstore.unity.com/packages/2d/environments/pixel-art-top-down-basic-cainos-187605
 https://pixabay.com/sound-effects/search/game/
 https://tallbeard.itch.io/music-loop-bundle?download
+https://craftpix.net/freebies/free-slime-mobs-pixel-art-top-down-sprite-pack/
+https://fkgcluster.itch.io/archer-free
+https://fkgcluster.itch.io/swordsmanfree
+https://williamqm.itch.io/dark-enemies-pack
+https://darkpixel-kronovi.itch.io/undead-executioner
+https://assetstore.unity.com/packages/2d/fonts/free-pixel-font-thaleah-140059?srsltid=AfmBOooz5HWWnAlYzVRyKvtzYQl0OZj2imsY6tI2MhBN2QoorFIXYEha

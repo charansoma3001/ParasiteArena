@@ -9,7 +9,7 @@ public class StatManager : MonoBehaviour
     private PlayerController playerController;
     public event System.Action OnStatsChanged;
 
-    // A mini-class to set up starting values in the Unity Inspector
+    // A class to set up starting values
     [System.Serializable]
     public class BaseStat
     {
@@ -17,16 +17,13 @@ public class StatManager : MonoBehaviour
         public float baseValue;
     }
 
-    [Header("Base Player Stats (Edit in Inspector)")]
+    [Header("Base Player Stats")]
     public List<BaseStat> startingStats;
-
-    // The list of all upgrades the player has collected this run
     private List<UpgradeData> activeUpgrades = new List<UpgradeData>();
 
-    // The final, calculated numbers ready to be used by the game
     private Dictionary<StatType, float> currentStats = new Dictionary<StatType, float>();
 
-    private void Awake() //sets up the singleton and calculates starting stats
+    private void Awake() //sets up the singleton for starting stats
     {
         if (Instance != null && Instance != this)
         {
@@ -36,31 +33,26 @@ public class StatManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        // Calculate the stats at the very start of the game
         RecalculateStats(); 
     }
 
-    public void AddUpgrade(UpgradeData newUpgrade) // saves a new upgrade and updates stats.
+    public void AddUpgrade(UpgradeData newUpgrade)
     {
         activeUpgrades.Add(newUpgrade);
         RecalculateStats(); 
     }
 
-    // The Game Math Engine
     private void RecalculateStats()
     {
         currentStats.Clear();
 
-        // Set everything to their base values
         foreach (var stat in startingStats)
         {
             currentStats[stat.statType] = stat.baseValue;
         }
 
-        // Apply all FLAT additions first
         foreach (var upgrade in activeUpgrades)
         {
-            // We added an inner loop to check every modifier on the item!
             foreach (var mod in upgrade.statModifiers)
             {
                 if (!mod.isMultiplier && currentStats.ContainsKey(mod.statToModify))
@@ -70,7 +62,7 @@ public class StatManager : MonoBehaviour
             }
         }
 
-        // Apply all MULTIPLIERS second
+        // multipliers
         foreach (var upgrade in activeUpgrades)
         {
             foreach (var mod in upgrade.statModifiers)
@@ -123,14 +115,13 @@ public class StatManager : MonoBehaviour
         }
     }
 
-    // Gagan and Terry will call this function!
-    public float GetStat(StatType stat) // lets other scripts ask for a stat value
+    public float GetStat(StatType stat)
     {
         if (currentStats.ContainsKey(stat))
         {
             return currentStats[stat];
         }
         
-        return 0f; // Fallback
+        return 0f;
     }
 }

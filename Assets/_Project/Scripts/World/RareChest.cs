@@ -1,7 +1,6 @@
 using UnityEngine;
 
-// Attached to every chest instance spawned by MapManager.
-// State machine: Closed -> Opened (one-way, no respawn).
+// Attached to every chest instance
 
 [RequireComponent(typeof(SpriteRenderer))]
 [RequireComponent(typeof(BoxCollider2D))]

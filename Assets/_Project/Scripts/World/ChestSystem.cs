@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class ChestSystem : MonoBehaviour
 {
-    [Header("Drop Probabilities (Must sum to 100)")]
+    [Header("Drop Probabilities")]
     [Range(0, 100)] public float goldChance = 50f;
     [Range(0, 100)] public float upgradeChance = 30f;
     [Range(0, 100)] public float healChance = 20f; 
@@ -12,7 +12,7 @@ public class ChestSystem : MonoBehaviour
     public int minGold = 10;
     public int maxGold = 50;
 
-    [Header("Available Upgrades (Drag ScriptableObjects Here)")]
+    [Header("Available Upgrades")]
     public List<UpgradeData> possibleUpgrades;
 
     [Header("Audio")]
@@ -21,10 +21,6 @@ public class ChestSystem : MonoBehaviour
     private bool hasBeenOpened = false;
     private PlayerController player;
 
-
-    // Gagan will call this function 
-    // When the player walks up to the chest and presses 'C', Gagan's script 
-    // will look for this ChestSystem component and trigger OpenChest().
     public void OpenChest()
     {
         if (hasBeenOpened) return;
@@ -35,7 +31,7 @@ public class ChestSystem : MonoBehaviour
 
         string chestMessage;
 
-        // The RNG Roll (Pick a random number between 0.0 and 100.0)
+        // pick a random number between 0.0 and 100.0
         float roll = Random.Range(0f, 100f);
 
         if (roll <= goldChance)
@@ -47,13 +43,11 @@ public class ChestSystem : MonoBehaviour
         }
         else if (roll <= (goldChance + upgradeChance))
         {
-            // Drop an Upgrade
             if (possibleUpgrades.Count > 0)
             {
                 int randomIndex = Random.Range(0, possibleUpgrades.Count);
                 UpgradeData droppedUpgrade = possibleUpgrades[randomIndex];
                 
-                // Send it directly to your StatManager!
                 StatManager.Instance.AddUpgrade(droppedUpgrade);
                 chestMessage = $"Chest opened: Found Upgrade [{droppedUpgrade.upgradeName}]!";
             }
@@ -64,7 +58,6 @@ public class ChestSystem : MonoBehaviour
         }
         else
         {
-            // Drop a Heal (Placeholder until Gagan builds the Player Health system)
             chestMessage = "You found a Health Potion!";
             if (player == null)
             {

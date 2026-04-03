@@ -109,7 +109,7 @@ public class WaveManager : MonoBehaviour
         {
             Bounds playable = map.GetPlayableBounds();
 
-            // Clamp the default to bounds immediately so the fallback is safe.
+            // this is to set the default area by clamping them immediately
             spawnPos = new Vector3(
                 Mathf.Clamp(spawnPos.x, playable.min.x, playable.max.x),
                 Mathf.Clamp(spawnPos.y, playable.min.y, playable.max.y),
@@ -125,10 +125,10 @@ public class WaveManager : MonoBehaviour
                     Mathf.Sin(angle) * bossSpawnOffset,
                     0f);
 
-                // inside playable bounds.
+                // inside playable bounds
                 if (!map.IsInsidePlayableArea(new Vector2(candidate.x, candidate.y))) continue;
 
-                // grass tile.
+                // grass tile
                 int tx = Mathf.RoundToInt(candidate.x);
                 int ty = Mathf.RoundToInt(candidate.y);
                 if (map.GetTerrainType(tx, ty) != TerrainType.Grass) continue;

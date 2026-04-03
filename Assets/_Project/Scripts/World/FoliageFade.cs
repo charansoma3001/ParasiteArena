@@ -1,7 +1,5 @@
 using UnityEngine;
 
-// Attach to the same GameObject as the trigger collider.
-// Fades out the ObjectFade component (searches self and children) when the Player enters.
 public class FoliageFade : MonoBehaviour
 {
     private ObjectFade fade;

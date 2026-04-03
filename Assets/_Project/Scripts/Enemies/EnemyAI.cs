@@ -311,8 +311,7 @@ public class EnemyAI : MonoBehaviour
         spawnTimer = stats.spawnInterval;
 
         Vector2 offset = CardinalDir(Random.insideUnitCircle) * tileSize;
-        var go   = Instantiate(stats.spawnPrefab,
-                               SnapPos(transform.position + (Vector3)offset), Quaternion.identity);
+        var go   = Instantiate(stats.spawnPrefab, SnapPos(transform.position + (Vector3)offset), Quaternion.identity);
         var ctrl = go.GetComponent<EnemyController>();
         ctrl?.Init();
         activeSpawnCount++;
@@ -402,8 +401,7 @@ public class EnemyAI : MonoBehaviour
     private bool WouldHitObstacle(Vector2 dir)
     {
         if (obstacleLayer == 0) return false;
-        return Physics2D.OverlapCircle(SnapPos((Vector2)transform.position + dir * tileSize),
-                                       tileSize * 0.3f, obstacleLayer);
+        return Physics2D.OverlapCircle(SnapPos((Vector2)transform.position + dir * tileSize), tileSize * 0.3f, obstacleLayer);
     }
 
     private float TilesFrom(Vector3 target) =>

@@ -120,8 +120,7 @@ public class EnemyController : MonoBehaviour
                 possessionTimer = stats.possessionDuration + (PossessionSystem.Instance != null ? PossessionSystem.Instance.BonusPossessionTime : 0f);
                 if (possessedIndicatorPrefab)
                 {
-                    possessedIndicator = Instantiate(possessedIndicatorPrefab,
-                                                      transform.position, Quaternion.identity, transform);
+                    possessedIndicator = Instantiate(possessedIndicatorPrefab, transform.position, Quaternion.identity, transform);
                     possessedIndicator.transform.localPosition = Vector3.up * (tileSize * 2.5f);
                 }
                 OnPossessionStart?.Invoke(this);
@@ -430,9 +429,7 @@ public class EnemyController : MonoBehaviour
         AttackTileActive = false;
     }
 
-    private Vector3 SnapToTile(Vector3 p) =>
-        new Vector3(Mathf.Round(p.x / tileSize) * tileSize,
-                    Mathf.Round(p.y / tileSize) * tileSize, p.z);
+    private Vector3 SnapToTile(Vector3 p) => new Vector3(Mathf.Round(p.x / tileSize) * tileSize, Mathf.Round(p.y / tileSize) * tileSize, p.z);
 
     public EnemyStats.EnemyType GetEnemyType() => stats.enemyType;
 

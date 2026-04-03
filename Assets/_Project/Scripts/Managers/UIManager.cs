@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using TMPro; // Required for Unity's modern text system
+using TMPro;
 
 public class UIManager : MonoBehaviour
 {
@@ -86,15 +86,12 @@ public class UIManager : MonoBehaviour
             StatManager.Instance.OnStatsChanged += UpdateStatHUD;
             UpdateStatHUD();
         }
-
-        // 1. Subscribe to the events broadcasting from ProgressionManager
         if (ProgressionManager.Instance != null)
         {
             ProgressionManager.Instance.OnLevelUp += UpdateLevelUI;
             ProgressionManager.Instance.OnXPAdded += UpdateXPUI;
             ProgressionManager.Instance.OnGoldChanged += UpdateGoldUI;
 
-            // 2. Force an initial update so the screen doesn't say "Text" when you press Play
             UpdateLevelUI(ProgressionManager.Instance.CurrentLevel);
             UpdateXPUI(ProgressionManager.Instance.CurrentXP, ProgressionManager.Instance.XPToNextLevel);
             UpdateGoldUI(ProgressionManager.Instance.CurrentGold);
@@ -103,7 +100,7 @@ public class UIManager : MonoBehaviour
 
     private void Update()
     {
-        // Handle cases where WaveManager appears slightly later than this UI object.
+        // this is for WaveManager appearing later than this UI object.
         if (!isWaveTimerSubscribed)
         {
             TryInitializeWaveTimerUI();
@@ -170,13 +167,13 @@ public class UIManager : MonoBehaviour
         waveManager.OnCountdownChanged += UpdateWaveCountdownUI;
         isWaveTimerSubscribed = true;
 
-        // Push an immediate value so the timer text never stays as blank/default.
+        // immediate value timer doesn't stay blank
         float initialTime = waveManager.CurrentState == GameState.WaveActive
             ? waveManager.WaveTimer
             : waveManager.timePerWave;
         UpdateTimerUI(initialTime);
         
-        // Push initial countdown value
+        //initial countdown value
         UpdateWaveCountdownUI(waveManager.PrepCountdown);
     }
 
@@ -206,7 +203,6 @@ public class UIManager : MonoBehaviour
 
     private void UpdateTimerUI(float timeLeft)
     {
-        // Format the raw float into clean seconds (e.g. 59, 58, 57...)
         if (timerText != null)
             timerText.text = "Time: " + Mathf.Max(0, Mathf.CeilToInt(timeLeft)).ToString();
     }
@@ -217,7 +213,6 @@ public class UIManager : MonoBehaviour
         {
             waveCountdownText.text = "Wave starts in: " + Mathf.CeilToInt(countdownTime).ToString();
             
-            // Show countdown when it's counting down
             if (countdownTime > 0)
                 ShowWaveCountdown();
             else
@@ -359,7 +354,7 @@ public class UIManager : MonoBehaviour
 
     public void ShowGameOverScreen()
     {
-        Time.timeScale = 0f; // Freeze the game
+        Time.timeScale = 0f;
         
         AudioManager.Instance?.PlayGameOver();
 
